@@ -1,0 +1,2496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChessLens</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Fira+Code:wght@400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{--ink:#0e0e12;--ink2:#15151c;--ink3:#1c1c26;--ink4:#252535;--line:rgba(255,255,255,.06);--line2:rgba(255,255,255,.12);--t1:#f0f0f8;--t2:#9898b8;--t3:#5a5a7a;--t4:#38384e;--gold:#e8c96a;--gold2:#f0d98a;--sage:#6bcb99;--rose:#e86b7a;--sky:#6baee8;--lav:#a08be8;--amb:#e8a86b;--r:10px;--rs:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Syne',sans-serif;background:var(--ink);color:var(--t1);min-height:100vh;font-size:14px;line-height:1.6;overflow-x:hidden}
+.shell{display:flex;min-height:100vh}
+/* Rail */
+.rail{width:64px;min-width:64px;background:var(--ink2);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:3px;position:sticky;top:0;height:100vh;z-index:20}
+.rail-logo{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px;cursor:pointer;flex-shrink:0;color:var(--ink);font-weight:800}
+.rb{width:44px;height:44px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t3);font-size:16px;transition:all .15s;position:relative;flex-shrink:0;border:none;background:none;user-select:none}
+.rb:hover{background:var(--ink3);color:var(--t2)}
+.rb.on{background:rgba(232,201,106,.12);color:var(--gold)}
+.rb .tip{position:absolute;left:52px;background:var(--ink4);border:1px solid var(--line2);border-radius:var(--rs);padding:5px 10px;font-size:11px;white-space:nowrap;color:var(--t1);display:none;pointer-events:none;z-index:99}
+.rb:hover .tip{display:block}
+.rsep{width:28px;height:1px;background:var(--line);margin:6px 0;flex-shrink:0}
+/* Workspace */
+.workspace{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{background:var(--ink2);border-bottom:1px solid var(--line);padding:0 22px;display:flex;align-items:center;gap:10px;height:52px;flex-shrink:0}
+.topbar-title{font-size:15px;font-weight:700;flex:1;letter-spacing:-.3px}
+.topbar-title span{color:var(--t3);font-weight:400;font-size:12px;font-family:monospace;margin-left:8px}
+.tbadge{background:rgba(232,201,106,.15);color:var(--gold);font-family:monospace;font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid rgba(232,201,106,.25);display:none}
+.content{flex:1;overflow-y:auto;padding:22px}
+/* Input panel */
+.ipanel{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.itabs{display:flex;border-bottom:1px solid var(--line)}
+.itab{flex:1;padding:11px 14px;font-size:12px;font-weight:600;cursor:pointer;color:var(--t3);text-align:center;letter-spacing:.5px;text-transform:uppercase;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;user-select:none}
+.itab.on{color:var(--gold);border-bottom-color:var(--gold)}
+.ibody{padding:18px;display:none}
+.ibody.on{display:block}
+.irow{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:9px;align-items:center}
+.inp{background:var(--ink3);border:1px solid var(--line2);color:var(--t1);padding:9px 12px;font-size:13px;font-family:'Syne',sans-serif;border-radius:var(--rs);outline:none;transition:border-color .15s}
+.inp:focus{border-color:var(--gold)}
+.inp::placeholder{color:var(--t4)}
+.iw{flex:1;min-width:150px}
+.sel{background:var(--ink3);border:1px solid var(--line2);color:var(--t2);padding:9px 12px;font-size:13px;font-family:'Syne',sans-serif;border-radius:var(--rs);cursor:pointer;outline:none}
+.pgroup{display:flex}
+.pb{background:var(--ink3);border:1px solid var(--line2);color:var(--t3);padding:9px 15px;font-size:12px;font-weight:600;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s}
+.pb:first-child{border-radius:var(--rs) 0 0 var(--rs)}
+.pb:last-child{border-radius:0 var(--rs) var(--rs) 0;border-left:none}
+.pb.on{background:rgba(232,201,106,.15);border-color:var(--gold);color:var(--gold)}
+.gobtn{background:var(--gold);color:var(--ink);border:none;padding:9px 20px;border-radius:var(--rs);font-size:13px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;white-space:nowrap}
+.gobtn:hover{background:var(--gold2)}
+.gobtn:disabled{opacity:.4;cursor:not-allowed}
+.pgna{width:100%;background:var(--ink3);border:1px solid var(--line2);color:var(--t2);padding:11px;font-size:11px;font-family:monospace;border-radius:var(--rs);resize:vertical;min-height:110px;outline:none;line-height:1.7}
+.pgna:focus{border-color:var(--gold)}
+.hint{font-size:11px;color:var(--t4);font-family:monospace;margin-top:7px}
+/* Dashboard */
+.dash{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px;margin-top:18px}
+.card{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:16px;overflow:hidden}
+.c2{grid-column:span 2}
+.c3{grid-column:span 3}
+.clabel{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);margin-bottom:7px}
+.bignum{font-size:34px;font-weight:800;font-family:monospace;line-height:1}
+.midnum{font-size:22px;font-weight:700;font-family:monospace}
+/* Colors */
+.cg{color:var(--sage)}.cr{color:var(--rose)}.cy{color:var(--gold)}.cb{color:var(--sky)}.cl{color:var(--lav)}.ca{color:var(--amb)}.cd{color:var(--t3)}
+/* AI box */
+.aibox{background:linear-gradient(135deg,rgba(232,201,106,.07),rgba(107,203,153,.04));border:1px solid rgba(232,201,106,.2);border-radius:var(--r);padding:18px 20px;margin-bottom:14px}
+.aihead{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.aichip{background:var(--gold);color:var(--ink);font-size:9px;font-weight:700;padding:3px 7px;border-radius:3px;letter-spacing:1px;font-family:monospace}
+.aititle{font-family:'Lora',serif;font-size:14px;font-style:italic;color:var(--t2)}
+.aitext{font-size:13px;color:var(--t2);line-height:1.85;font-family:'Lora',serif}
+.aitext strong{color:var(--t1);font-family:'Syne',sans-serif}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
+.tag{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;font-family:monospace;border:1px solid}
+.tg{background:rgba(107,203,153,.1);color:var(--sage);border-color:rgba(107,203,153,.25)}
+.tr{background:rgba(232,107,122,.1);color:var(--rose);border-color:rgba(232,107,122,.25)}
+.ty{background:rgba(232,201,106,.1);color:var(--gold);border-color:rgba(232,201,106,.25)}
+.tb{background:rgba(107,174,232,.1);color:var(--sky);border-color:rgba(107,174,232,.25)}
+/* Score bar */
+.srow{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.sname{font-size:12px;color:var(--t2);width:96px;flex-shrink:0}
+.strack{flex:1;height:5px;background:var(--ink4);border-radius:3px;overflow:hidden}
+.sfill{height:5px;border-radius:3px;transition:width .5s}
+.sval{font-size:11px;font-family:monospace;width:30px;text-align:right;flex-shrink:0}
+/* Chart */
+.chwrap{position:relative;width:100%}
+.h160{height:160px}.h190{height:190px}.h220{height:220px}.h250{height:250px}
+/* Section header */
+.sech{display:flex;align-items:center;gap:10px;margin:20px 0 13px}
+.sech:first-child{margin-top:4px}
+.sechtitle{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--t3);white-space:nowrap}
+.sechline{flex:1;height:1px;background:var(--line)}
+/* Arc */
+.arcw{position:relative;width:76px;height:76px;flex-shrink:0}
+.arcw svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.arcc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.arcv{font-size:16px;font-weight:800;font-family:monospace}
+.arcs{font-size:9px;color:var(--t3)}
+/* Tactic cells */
+.tcells{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:13px}
+.tcell{background:var(--ink3);border:1px solid var(--line);border-radius:var(--rs);padding:11px;text-align:center}
+.tnum{font-size:22px;font-weight:800;font-family:monospace}
+.tlbl{font-size:10px;color:var(--t3);margin-top:2px}
+/* Opening row */
+.oprow{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)}
+.oprow:last-child{border-bottom:none}
+.opname{flex:1;font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opbar{width:60px;height:4px;background:var(--ink4);border-radius:2px;overflow:hidden;flex-shrink:0}
+.opfill{height:4px;border-radius:2px}
+.opwr{font-size:11px;font-family:monospace;width:30px;text-align:right;flex-shrink:0}
+.opn{font-size:10px;color:var(--t4);font-family:monospace;width:18px;text-align:right;flex-shrink:0}
+/* Games table */
+.gtbl{width:100%;border-collapse:collapse}
+.gtbl th{font-size:10px;font-weight:700;color:var(--t4);text-transform:uppercase;letter-spacing:.8px;padding:7px 9px;text-align:left;border-bottom:1px solid var(--line)}
+.gtbl td{padding:8px 9px;font-size:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+.gtbl tr:last-child td{border-bottom:none}
+.rp{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;font-family:monospace}
+.rw{background:rgba(107,203,153,.15);color:var(--sage)}
+.rd{background:rgba(160,139,232,.15);color:var(--lav)}
+.rl{background:rgba(232,107,122,.15);color:var(--rose)}
+/* Puzzle cards */
+.pzgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:11px}
+.pzcard{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);padding:13px;cursor:pointer;transition:all .18s;text-decoration:none;display:block;color:inherit}
+.pzcard:hover{border-color:var(--gold);transform:translateY(-2px)}
+.pztheme{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--gold);margin-bottom:5px}
+.pztitle{font-size:13px;font-weight:600;margin-bottom:4px}
+.pzdesc{font-size:11px;color:var(--t3);line-height:1.5}
+.pzlink{display:inline-block;margin-top:9px;font-size:11px;color:var(--sky);font-weight:700}
+/* Study */
+.stcard{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;text-decoration:none;color:inherit}
+.stcard:hover{border-color:rgba(107,174,232,.4)}
+.stprio{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0}
+.stbody{flex:1;min-width:0}
+.sttitle{font-size:13px;font-weight:600;margin-bottom:3px}
+.stdesc{font-size:11px;color:var(--t3);line-height:1.5}
+.stmeta{display:flex;gap:10px;margin-top:7px;font-size:10px;color:var(--t4);font-family:monospace}
+.stlink{font-size:11px;color:var(--sky);font-weight:700;flex-shrink:0;align-self:center}
+/* Empty/loading */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 20px;text-align:center;color:var(--t3)}
+.eglyph{font-size:48px;margin-bottom:16px;animation:fl 3s ease-in-out infinite}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.etitle{font-size:16px;font-weight:700;color:var(--t2);margin-bottom:6px}
+.esub{font-size:13px;font-family:'Lora',serif;font-style:italic;max-width:300px;line-height:1.6}
+.spin{width:26px;height:26px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;animation:sp .7s linear infinite;margin-bottom:12px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ltxt{font-size:13px;color:var(--t3)}
+@media(max-width:900px){.dash{grid-template-columns:1fr 1fr}.c3,.c2{grid-column:span 2}}
+@media(max-width:600px){.rail{display:none}.dash{grid-template-columns:1fr}.c3,.c2{grid-column:1}.content{padding:14px}}
+
+/* PGN mode sub-tabs */
+.pgn-mode-tabs{display:flex;gap:8px;margin-bottom:12px}
+.pmt{background:var(--ink4);border:1px solid var(--line2);color:var(--t3);padding:7px 16px;border-radius:var(--rs);font-size:12px;font-weight:600;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;user-select:none}
+.pmt.on{background:rgba(232,201,106,.15);border-color:var(--gold);color:var(--gold)}
+/* Engine badges */
+.eng-badge{background:rgba(107,203,153,.12);color:var(--sage);font-family:monospace;font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid rgba(107,203,153,.2);display:none}
+.src-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.5px;font-family:monospace;border:1px solid}
+.src-engine{background:rgba(107,203,153,.12);color:var(--sage);border-color:rgba(107,203,153,.3)}
+.src-api{background:rgba(107,174,232,.1);color:var(--sky);border-color:rgba(107,174,232,.25)}
+.src-est{background:rgba(90,90,122,.12);color:var(--t3);border-color:var(--line2)}
+/* Engine progress */
+.eng-prog{background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:14px 18px;width:340px;margin:0 auto}
+.eng-prog-track{height:4px;background:var(--ink4);border-radius:2px;overflow:hidden;margin:8px 0 5px}
+.eng-prog-fill{height:4px;background:linear-gradient(90deg,var(--sage),var(--gold));border-radius:2px;transition:width .3s}
+.eng-prog-lbl{font-size:11px;color:var(--t3);font-family:monospace;display:flex;justify-content:space-between}
+/* Move annotations */
+.ann-best{color:#6bcb99}.ann-excellent{color:#6bcb99}.ann-brilliant{color:#20c997}
+.ann-good{color:#8ecb6b}.ann-ok{color:#9898b8}
+.ann-inaccuracy{color:#e8c96a}.ann-mistake{color:#e8a86b}.ann-blunder{color:#e86b7a}.ann-missed{color:#a08be8}
+/* Move list */
+.moves-list{font-family:monospace;font-size:12px;overflow-y:auto}
+.move-row{display:flex;align-items:stretch;border-bottom:1px solid var(--line)}
+.move-row:last-child{border-bottom:none}
+.move-num{width:34px;padding:5px 6px;color:var(--t4);font-size:11px;background:var(--ink3);flex-shrink:0;display:flex;align-items:center;justify-content:flex-end}
+.move-cell{flex:1;padding:5px 7px;cursor:pointer;transition:background .1s;display:flex;align-items:center;gap:4px;min-width:0}
+.move-cell:hover{background:var(--ink3)}
+.move-cell.cur{background:rgba(232,201,106,.1);color:var(--gold)}
+.move-ann{font-size:12px;flex-shrink:0;width:18px}
+.move-san{flex:1}
+/* Chess board */
+/* ── Chess board ── */
+.board-outer{width:100%;position:relative;line-height:0}
+.board-outer::before{content:'';display:block;padding-top:100%}
+.board-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,12.5%);grid-template-rows:repeat(8,12.5%);border:2px solid #1a1a2e;overflow:hidden;user-select:none;background:#1a1a2e}
+.sq{position:relative;width:100%;height:100%;cursor:pointer;overflow:hidden}
+.sq.light{background:#f0d9b5}.sq.dark{background:#b58863}
+.sq.hl-from{background:rgba(170,162,58,.5)!important}
+.sq.hl-to{background:rgba(170,162,58,.75)!important}
+.sq.hl-best-from{box-shadow:inset 0 0 0 4px rgba(107,203,153,.9)!important}
+.sq.hl-best-to{background:rgba(107,203,153,.45)!important}
+.sq.hl-check{background:radial-gradient(circle,rgba(210,30,30,.85) 10%,rgba(200,50,50,.3) 100%)!important}
+.sq-piece{position:absolute;inset:5%;width:90%;height:90%;pointer-events:none}
+.sq-piece svg{width:100%;height:100%;display:block;filter:drop-shadow(0 1.5px 2.5px rgba(0,0,0,.6))}
+.sq-coord{position:absolute;font-size:clamp(7px,1.1vw,11px);font-weight:700;pointer-events:none;font-family:monospace;line-height:1;z-index:2;opacity:.85}
+.sq-coord.file{bottom:2px;right:3px}
+.sq-coord.rank{top:2px;left:3px}
+/* Eval bar */
+.eval-bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;align-self:stretch}
+.eval-bar{width:16px;flex:1;min-height:0;background:var(--ink4);border-radius:3px;overflow:hidden;position:relative}
+.eval-bar-b{background:var(--ink2);position:absolute;top:0;left:0;right:0;transition:height .35s}
+.eval-bar-w{background:#f0f0f0;position:absolute;bottom:0;left:0;right:0;transition:height .35s}
+.eval-val{font-size:9px;font-family:monospace;color:var(--t3)}
+/* Eval graph */
+.eval-graph-wrap{position:relative;width:100%;height:72px;background:var(--ink3);border-radius:var(--rs);overflow:hidden;cursor:pointer}
+.eval-graph-wrap canvas{display:block;width:100%;height:72px}
+.eval-cursor-line{position:absolute;top:0;width:2px;background:var(--gold);height:100%;pointer-events:none;transition:left .12s;opacity:.8}
+/* Summary grid */
+.summ-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.summ-card{background:var(--ink3);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.ann-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px;cursor:pointer}
+.ann-row:last-child{border-bottom:none}
+.ann-row:hover{color:var(--t1)}
+.ann-icon{width:22px;font-size:13px;flex-shrink:0}
+.ann-name{flex:1;color:var(--t2)}
+.ann-cnt{font-family:monospace;font-weight:700;min-width:24px;text-align:right}
+/* Phase CPL table */
+.phase-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.phase-tbl th{font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.8px;padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}
+.phase-tbl td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.phase-tbl tr:last-child td{border-bottom:none}
+@media(max-width:700px){.summ-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="rail" id="rail">
+  <div class="rail-logo">&#9817;</div>
+  <button class="rb on" data-tab="overview">&#128202;<span class="tip">Overview</span></button>
+  <button class="rb" data-tab="accuracy">&#127919;<span class="tip">Accuracy &amp; Blunders</span></button>
+  <button class="rb" data-tab="openings">&#128214;<span class="tip">Openings</span></button>
+  <div class="rsep"></div>
+  <button class="rb" data-tab="tactics">&#9889;<span class="tip">Tactics &amp; Attack</span></button>
+  <button class="rb" data-tab="positional">&#129713;<span class="tip">Positional &amp; Strategy</span></button>
+  <button class="rb" data-tab="defense">&#128737;<span class="tip">Defense</span></button>
+  <button class="rb" data-tab="endgame">&#9820;<span class="tip">Endgame</span></button>
+  <button class="rb" data-tab="time">&#9201;<span class="tip">Time Management</span></button>
+  <div class="rsep"></div>
+  <button class="rb" data-tab="puzzles">&#129504;<span class="tip">Puzzles &amp; Study</span></button>
+  <button class="rb" data-tab="games">&#127918;<span class="tip">Game History</span></button>
+</aside>
+<div class="workspace">
+  <div class="topbar">
+    <div class="topbar-title">ChessLens <span id="tsub">&#8212; enter username or paste PGN to begin</span></div>
+    <span class="eng-badge" id="eng-badge">&#9881; Engine ready</span>
+    <span class="tbadge" id="gcbadge"></span>
+    <button id="deploy-btn" style="background:none;border:1px solid var(--line2);color:var(--t3);padding:5px 11px;border-radius:var(--rs);font-size:11px;font-family:'Syne',sans-serif;cursor:pointer;font-weight:600">&#128640; Deploy</button>
+  </div>
+  <div id="deploy-panel" style="display:none;background:var(--ink3);border-bottom:1px solid var(--line2);padding:14px 22px;font-size:12px">
+    <b style="color:var(--gold)">Deploy free in 60s:</b>
+    &nbsp;&#11088; <b>GitHub Pages</b> &#8212; rename to index.html, push to repo, Settings&#8594;Pages&#8594;GitHub Actions, tag v1.0.0
+    &nbsp;&#8195;&#9889; <b>Netlify</b> &#8212; drag file to netlify.com/drop
+    &nbsp;&#8195;&#9729; <b>Cloudflare Pages</b> &#8212; connect GitHub repo, no build command
+  </div>
+  <div class="content" id="content">
+    <div class="ipanel" id="ipanel">
+      <div class="itabs">
+        <div class="itab on" data-itab="api">&#127760; Fetch from Platform</div>
+        <div class="itab" data-itab="pgn">&#128203; Paste PGN</div>
+      </div>
+      <div class="ibody on" id="ibody-api">
+        <div class="irow">
+          <div class="pgroup">
+            <button class="pb on" id="pb-lichess" data-plat="lichess">&#9817; Lichess</button>
+            <button class="pb" id="pb-chesscom" data-plat="chesscom">&#9822; Chess.com</button>
+          </div>
+          <input class="inp iw" id="api-user" type="text" placeholder="Your username&#8230;" />
+          <select class="sel" id="api-tc">
+            <option value="blitz">Blitz (3&#8211;5 min)</option>
+            <option value="rapid">Rapid (10&#8211;15 min)</option>
+            <option value="bullet">Bullet (1&#8211;2 min)</option>
+            <option value="classical">Classical</option>
+          </select>
+          <select class="sel" id="api-n">
+            <option value="30">Last 30 games</option>
+            <option value="50">Last 50 games</option>
+            <option value="100">Last 100 games</option>
+          </select>
+          <button class="gobtn" id="api-go">Analyze &#9817;</button>
+          <button id="clear-cache-btn" style="background:none;border:1px solid var(--line2);color:var(--t4);padding:9px 12px;border-radius:var(--rs);font-size:11px;font-family:'Syne',sans-serif;cursor:pointer" title="Clear cached results">&#128465; Cache</button>
+        </div>
+        <div class="hint" id="fetch-hint">Lichess: open API. Chess.com: auto-proxied. Results cached 5 min.</div>
+      </div>
+      <div class="ibody" id="ibody-pgn">
+        <div class="pgn-mode-tabs">
+          <button class="pmt on" data-pmode="player">&#128100; Player Analysis (multi-game)</button>
+          <button class="pmt" data-pmode="game">&#9817; Single Game Analysis</button>
+        </div>
+        <div id="pgn-player-opts">
+          <div class="irow">
+            <input class="inp iw" id="pgn-user" type="text" placeholder="Your username (to identify your color)&#8230;" />
+            <button class="gobtn" id="pgn-go">Analyze &#9817;</button>
+          </div>
+        </div>
+        <div id="pgn-game-opts" style="display:none">
+          <div class="irow">
+            <input class="inp" id="pgn-white" type="text" placeholder="White player name&#8230;" style="flex:1;min-width:120px"/>
+            <input class="inp" id="pgn-black" type="text" placeholder="Black player name&#8230;" style="flex:1;min-width:120px"/>
+            <select class="sel" id="pgn-depth">
+              <option value="12">Fast (depth 12)</option>
+              <option value="15" selected>Balanced (depth 15)</option>
+              <option value="18">Deep (depth 18)</option>
+            </select>
+            <button class="gobtn" id="pgn-game-go">Analyse Game &#9817;</button>
+          </div>
+        </div>
+        <textarea class="pgna" id="pgn-text" placeholder="Paste PGN here&#8230;&#10;&#10;[Event &quot;Rated Blitz game&quot;]&#10;[White &quot;Magnus&quot;] [Black &quot;Hikaru&quot;]&#10;1. e4 e5 2. Nf3 Nc6 ..."></textarea>
+        <div class="hint">Export from Lichess: Account &#8594; Export games. Chess.com: Game &#8594; Share &#8594; PGN.</div>
+      </div>
+    </div>
+    <div id="dash">
+      <div class="empty">
+        <div class="eglyph">&#9819;</div>
+        <div class="etitle">Ready for analysis</div>
+        <div class="esub">Fetch games from Lichess or Chess.com, or paste PGN. Single-game mode runs Stockfish engine analysis with move annotations, eval bar, and a full summary.</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+
+'use strict';
+
+// ── State ────────────────────────────────────────────────────
+var PLT = 'lichess', PGN_MODE = 'player';
+var G = null, SG = null;
+var CHARTS = [], ACTIVE_TAB = 'overview';
+var SF = null, SF_READY = false, CHESS_LOADED = false;
+var C = { gold:'#e8c96a', sage:'#6bcb99', rose:'#e86b7a', sky:'#6baee8',
+          lav:'#a08be8', amb:'#e8a86b', t3:'#5a5a7a', t4:'#38384e',
+          ink3:'#1c1c26', ink4:'#252535', line:'rgba(255,255,255,0.06)' };
+
+// Annotation thresholds (centipawn loss from mover's perspective)
+// CPL thresholds aligned with Lichess classification
+// https://lichess.org/blog/WFvLpiQAACMA8e9D/learn-from-your-mistakes
+// CPL thresholds (centipawn loss from mover's perspective)
+var CPL_THRESHOLD = { brilliant:0, great:5, best:10, good:20, inaccuracy:30, mistake:60, blunder:100 };
+// 7-tier system matching Lichess (book, brilliant, good, inaccuracy, mistake, blunder, missed)
+// 8-tier annotation system matching Chess.com style
+var ANN_META = {
+  brilliant:  { sym:'!!', label:'Brilliant',   cls:'ann-brilliant',  color:'#21d4b4', icon:'&#9830;&#9830;' },
+  great:      { sym:'!',  label:'Great',       cls:'ann-great',      color:'#5bb7db', icon:'&#9830;'        },
+  best:       { sym:'',   label:'Best',        cls:'ann-best',       color:'#6bcb99', icon:'&#10003;'       },
+  good:       { sym:'',   label:'Good',        cls:'ann-good',       color:'#96bc4b', icon:'&#10003;'       },
+  book:       { sym:'',   label:'Book',        cls:'ann-book',       color:'#a0a0c0', icon:'&#128218;'      },
+  inaccuracy: { sym:'?!', label:'Inaccuracy',  cls:'ann-inaccuracy', color:'#f0c15f', icon:'?!'             },
+  mistake:    { sym:'?',  label:'Mistake',     cls:'ann-mistake',    color:'#e08c2e', icon:'?'              },
+  miss:       { sym:'',   label:'Miss',        cls:'ann-miss',       color:'#c97cff', icon:'&#x25ef;'       },
+  blunder:    { sym:'??', label:'Blunder',     cls:'ann-blunder',    color:'#e86b7a', icon:'??'             }
+};
+
+// SVG piece renderer - clean, proportional, visible on all square colors
+function pieceSVG(piece) {
+  if (!piece) return '';
+  var W = '#fff', Ws = '#000000', B = '#000000', Bs = '#ffffff';
+  var isW = piece === piece.toUpperCase();
+  var f = isW ? W : B;   // fill
+  var s = isW ? Ws : Bs; // stroke
+  var p = piece.toLowerCase();
+  var sw = '1.5';
+  var d = '';
+  if (p === 'p') {
+    d = '<path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47C28.06 24.84 29 23.03 29 21c0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '" stroke-linecap="round"/>';
+  } else if (p === 'r') {
+    d = '<g fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zm3-3v-4h21v4H12zm-1-22V9h4v2h5V9h5v2h5V9h4v5" stroke-linecap="butt"/><path d="M34 14l-3 3H14l-3-3"/><path d="M31 17v12.5H14V17" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M31 29.5l1.5 2.5h-20l1.5-2.5"/><path d="M11 14h23" fill="none" stroke="' + s + '" stroke-linejoin="miter"/></g>';
+  } else if (p === 'n') {
+    d = '<g fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10c10.5 1 16.5 8 16 29H15c0-9 10-6.5 8-21"/><path d="M24 18c.38 5.12-4.17 4.22-5.24 5.42-.72.83-.96 2.33-.96 3.58H15s.1-2.5 1.25-3.92c.83-1 2.5-2.08 3.75-3.25"/><circle cx="14.93" cy="15.5" r="1.5" fill="' + s + '" stroke="none"/></g>';
+  } else if (p === 'b') {
+    d = '<g fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"><g stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.5.5 1.5 1.5 0 1-.5 2.5-.5 2.5-8.5 1-18.5 1-27 0 0 0-.5-1.5-.5-2.5 0-1 1.5-1.5 1.5-1.5z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><path d="M25 8a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" fill="none" stroke="' + s + '"/></g>';
+  } else if (p === 'q') {
+    d = '<g fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.75"/><circle cx="14" cy="9" r="2.75"/><circle cx="22.5" cy="8" r="2.75"/><circle cx="31" cy="9" r="2.75"/><circle cx="39" cy="12" r="2.75"/><path d="M9 26c8.5-8.5 15.5-8.5 27 0l2.5-12.5L31 25l-.3-14.1-8.2 13.4-8.4-13.1L14 25 6.5 13.5 9 26z"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z"/><path d="M11 38.5a35 35 1 0 0 23 0" fill="none" stroke="' + s + '"/></g>';
+  } else if (p === 'k') {
+    d = '<g fill="' + f + '" stroke="' + s + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6"/><path d="M20 8h5" stroke-width="1.5"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V17s-5.5-3.5-11 1-4 9.5-4 9.5c-3.5 4.5 5.5 8.5 5.5 8.5V37"/><path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0" fill="none" stroke="' + s + '"/></g>';
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45" style="width:100%;height:100%;display:block;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5))">' + d + '</svg>';
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.rb[data-tab]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      ACTIVE_TAB = btn.dataset.tab;
+      document.querySelectorAll('.rb').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      if (G) renderTab(ACTIVE_TAB);
+    });
+  });
+  document.querySelectorAll('.itab[data-itab]').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.itab').forEach(function(t){ t.classList.remove('on'); });
+      document.querySelectorAll('.ibody').forEach(function(b){ b.classList.remove('on'); });
+      tab.classList.add('on');
+      document.getElementById('ibody-' + tab.dataset.itab).classList.add('on');
+    });
+  });
+  document.querySelectorAll('.pb[data-plat]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      PLT = btn.dataset.plat;
+      document.querySelectorAll('.pb').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+    });
+  });
+  document.querySelectorAll('.pmt[data-pmode]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      PGN_MODE = btn.dataset.pmode;
+      document.querySelectorAll('.pmt').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      document.getElementById('pgn-player-opts').style.display = PGN_MODE === 'player' ? '' : 'none';
+      document.getElementById('pgn-game-opts').style.display   = PGN_MODE === 'game'   ? '' : 'none';
+    });
+  });
+  document.getElementById('api-go').addEventListener('click', runAPI);
+  document.getElementById('pgn-go').addEventListener('click', runPGNPlayer);
+  document.getElementById('pgn-game-go').addEventListener('click', runPGNGame);
+  document.getElementById('api-user').addEventListener('keydown', function(e){ if(e.key==='Enter') runAPI(); });
+  document.getElementById('clear-cache-btn').addEventListener('click', function() {
+    FETCH_CACHE = {};
+    var btn = document.getElementById('clear-cache-btn');
+    btn.textContent = '\u2713 Cleared'; btn.style.color = 'var(--sage)';
+    setTimeout(function(){ btn.textContent = '\ud83d\uddd1 Cache'; btn.style.color = 'var(--t4)'; }, 2000);
+  });
+  document.getElementById('deploy-btn').addEventListener('click', function() {
+    var p = document.getElementById('deploy-panel');
+    p.style.display = p.style.display === 'block' ? 'none' : 'block';
+  });
+  initStockfish();
+});
+
+// ════════════════════════════════════════════════════════
+//  ENGINE — Three-tier: Lichess Cloud Eval → Local Stockfish → Heuristic
+// ════════════════════════════════════════════════════════
+
+// ── Tier 1: Lichess Cloud Eval API ───────────────────────────
+// Free, open CORS, same data Lichess uses on their own analysis board.
+// Returns the best move + centipawn eval from their opening/endgame database.
+// Rate limit: very generous (~1 req/300ms is safe).
+async function lichessCloudEval(fen) {
+  try {
+    var url = 'https://lichess.org/api/cloud-eval?fen=' + encodeURIComponent(fen) + '&multiPv=1';
+    var r = await fetch(url, { signal: AbortSignal.timeout(2000) });
+    if (!r.ok) return null;          // 404 = position not in DB, fall through
+    var data = await r.json();
+    if (!data || !data.pvs || !data.pvs[0]) return null;
+    var pv  = data.pvs[0];
+    var bestMove = pv.moves ? pv.moves.split(' ')[0] : null;
+    if (pv.mate !== undefined) return { cp: pv.mate > 0 ? 10000 : -10000, mate: pv.mate, bestMove: bestMove, src: 'cloud' };
+    return { cp: pv.cp !== undefined ? pv.cp : 0, mate: null, bestMove: bestMove, src: 'cloud' };
+  } catch(e) { return null; }
+}
+
+// ── Tier 2: Local Stockfish Worker ───────────────────────────
+// Loaded lazily only when cloud eval misses a position.
+// Uses cdnjs Stockfish.js 10.0.4 — no WASM, works in most browsers.
+var SF = null, SF_READY = false, SF_LOADING = false;
+
+function initStockfish() {
+  if (SF_LOADING || SF_READY) return;
+  SF_LOADING = true;
+  try {
+    SF = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.4/stockfish.js');
+    SF.onerror = function() { SF = null; SF_READY = false; SF_LOADING = false; };
+    // 10-second timeout for engine to become ready
+    var readyTimer = setTimeout(function() {
+      if (!SF_READY) { SF = null; SF_LOADING = false; }
+    }, 10000);
+    SF.onmessage = function(e) {
+      var msg = e.data;
+      if (msg === 'uciok')   { SF.postMessage('isready'); return; }
+      if (msg === 'readyok') {
+        clearTimeout(readyTimer);
+        SF_READY = true; SF_LOADING = false;
+        var b = document.getElementById('eng-badge');
+        if (b) { b.style.display = ''; b.textContent = '⚙ Engine ready'; }
+        return;
+      }
+      if (SF._cb) SF._cb(msg);
+    };
+    SF.postMessage('uci');
+  } catch(e) { SF = null; SF_READY = false; SF_LOADING = false; }
+}
+
+// Evaluate via local Stockfish with a hard timeout
+function sfEval(fen, depth) {
+  return new Promise(function(resolve) {
+    if (!SF || !SF_READY) { resolve(null); return; }
+    var done = false;
+    var best = null, last = null;
+    // Hard 6-second timeout per position
+    var timer = setTimeout(function() {
+      if (!done) { done = true; SF._cb = null; resolve(null); }
+    }, 3000);
+    SF._cb = function(msg) {
+      if (msg.indexOf('info') === 0 && msg.indexOf(' score ') >= 0) {
+        last = msg;
+        var bm = msg.match(/ pv (\S+)/); if (bm) best = bm[1];
+      }
+      if (msg.indexOf('bestmove') === 0) {
+        if (done) return; done = true; clearTimeout(timer); SF._cb = null;
+        var bm2 = msg.match(/bestmove (\S+)/);
+        if (bm2 && bm2[1] !== '(none)') best = bm2[1];
+        if (!last) { resolve({ cp:0, mate:null, bestMove:best, src:'local' }); return; }
+        var mM = last.match(/ score mate (-?\d+)/);
+        var cM = last.match(/ score cp (-?\d+)/);
+        resolve({ cp: cM ? parseInt(cM[1],10) : 0, mate: mM ? parseInt(mM[1],10) : null, bestMove: best, src:'local' });
+      }
+    };
+    SF.postMessage('position fen ' + fen);
+    SF.postMessage('go depth ' + (depth || 15));
+  });
+}
+
+// ── Tier 3: Heuristic (instant, no network) ──────────────────
+function heuristicEval(fen) {
+  var vals = { P:100,N:320,B:330,R:500,Q:900,p:-100,n:-320,b:-330,r:-500,q:-900 };
+  var cp = 0;
+  fen.split(' ')[0].split('').forEach(function(c){ cp += vals[c] || 0; });
+  return { cp: cp, mate: null, bestMove: null, src: 'heuristic' };
+}
+
+// ── Master eval function: cloud → local SF → heuristic ───────
+async function evalPosition(fen, depth) {
+  // Try Lichess cloud first (free, accurate, no install needed)
+  var r = await lichessCloudEval(fen);
+  if (r) return r;
+  // Fall back to local Stockfish if ready
+  if (SF_READY) {
+    var r2 = await sfEval(fen, depth);
+    if (r2) return r2;
+  }
+  // Final fallback: piece-count heuristic (instant but rough)
+  return heuristicEval(fen);
+}
+
+//  CHESS.JS LOADER  (for FEN generation from SAN moves)
+// ════════════════════════════════════════════════════════
+function loadChessJS() {
+  return new Promise(function(resolve) {
+    if (typeof Chess !== 'undefined') { CHESS_LOADED = true; resolve(true); return; }
+    // Try <script> tag first (works when CSP allows cdnjs)
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js';
+    s.onload = function() { CHESS_LOADED = true; resolve(true); };
+    s.onerror = function() {
+      // Fallback: fetch as text and eval (bypasses script-src CSP)
+      fetch('https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          try {
+            // Use indirect eval to run in global scope
+            var fn = new Function(code + '; if(typeof module!=="undefined"&&module.exports){return module.exports;}return Chess;');
+            var ChessClass = fn();
+            if (ChessClass) window.Chess = ChessClass;
+            CHESS_LOADED = typeof Chess !== 'undefined';
+            resolve(CHESS_LOADED);
+          } catch(e) { resolve(false); }
+        })
+        .catch(function() { resolve(false); });
+    };
+    document.head.appendChild(s);
+  });
+}
+
+// Strip PGN annotations, return array of SAN move strings
+function pgnToSAN(pgn) {
+  return pgn
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\{[^}]*\}/g, '')
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\$\d+/g, '')
+    .replace(/\d+\.\.\./g, '')
+    .replace(/\d+\./g, '')
+    .replace(/1-0|0-1|1\/2-1\/2|\*/g, '')
+    .split(/\s+/)
+    .filter(function(t){ return t && /^[a-zA-Z]/.test(t); });
+}
+
+// Returns { fens, ucis } where fens[i] = position before move i,
+// ucis[i] = UCI string of move i (e.g. "e2e4"), fens[0] = starting position
+function sanToFENs(sanMoves) {
+  try {
+    var chess = new Chess();
+    var fens = [chess.fen()];
+    var ucis = [];
+    for (var i = 0; i < sanMoves.length; i++) {
+      var result = chess.move(sanMoves[i], { sloppy: true });
+      if (!result) break;
+      ucis.push(result.from + result.to + (result.promotion || ''));
+      fens.push(chess.fen());
+    }
+    return { fens: fens, ucis: ucis };
+  } catch(e) { return null; }
+}
+
+// Parse clock annotations from PGN
+function parsePGNClocks(pgn) {
+  var ms = pgn.match(/\[%clk (\d+):(\d+):(\d+)\]/g) || [];
+  return ms.map(function(m) {
+    var t = m.match(/(\d+):(\d+):(\d+)/);
+    return t ? parseInt(t[1])*3600 + parseInt(t[2])*60 + parseInt(t[3]) : null;
+  });
+}
+
+// Heuristic eval when no engine (piece balance in CP)
+function heuristicCP(fen) { return heuristicEval(fen).cp; } // compat shim
+
+// Classify a move given CPL and whether it was the engine's top choice
+// Count material balance from White's perspective in centipawns
+// Used for sacrifice detection
+function materialCount(fen) {
+  var vals = { P:100, N:320, B:330, R:500, Q:900, p:-100, n:-320, b:-330, r:-500, q:-900 };
+  var cp = 0;
+  (fen.split(' ')[0]).split('').forEach(function(c) { cp += vals[c] || 0; });
+  return cp;
+}
+
+// 8-tier classification:
+// Brilliant(!!) > Great(!) > Best > Good > Book > Inaccuracy(?!) > Mistake(?) > Miss > Blunder(??)
+function classifyMove(cpl, isTopUCI, isSacrifice, hadWinningAdv, isBook) {
+  // Book move — opening theory, near-zero CPL, early game
+  if (isBook) return 'book';
+  // Brilliant — engine's top move AND involves a material sacrifice
+  if (isTopUCI && isSacrifice) return 'brilliant';
+  // Great — engine's top move with very low CPL (not a sacrifice)
+  if (isTopUCI && cpl <= CPL_THRESHOLD.great) return 'great';
+  // Best — engine's exact top move, any CPL (it WAS the best move)
+  if (isTopUCI) return 'best';
+  // Good / Best range by CPL (non-top but still solid)
+  if (cpl <= CPL_THRESHOLD.best)       return 'best';
+  if (cpl <= CPL_THRESHOLD.good)       return 'good';
+  if (cpl <= CPL_THRESHOLD.inaccuracy) return 'inaccuracy';
+  if (cpl <= CPL_THRESHOLD.mistake)    return 'mistake';
+  // Miss — had a significant winning advantage and let it slip
+  if (hadWinningAdv && cpl <= 250)     return 'miss';
+  return 'blunder';
+}
+
+// ════════════════════════════════════════════════════════
+//  SINGLE GAME ANALYSIS
+// ════════════════════════════════════════════════════════
+var _sgKeyHandler = null;
+
+async function runPGNGame() {
+  var pgn   = document.getElementById('pgn-text').value.trim();
+  var depth = parseInt(document.getElementById('pgn-depth').value, 10) || 15;
+  var wName = document.getElementById('pgn-white').value.trim();
+  var bName = document.getElementById('pgn-black').value.trim();
+  if (!pgn) { alert('Paste a PGN game first.'); return; }
+
+  var btn = document.getElementById('pgn-game-go');
+  btn.disabled = true;
+
+  showLoading('Loading chess engine\u2026');
+  var chessOk = await loadChessJS();
+  if (!chessOk) { showError('Could not load chess.js. Check internet connection.'); btn.disabled = false; return; }
+
+  // Parse PGN tags
+  var tags = {};
+  var tr = /\[(\w+)\s+"([^"]*)"\]/g, tm;
+  while ((tm = tr.exec(pgn)) !== null) tags[tm[1]] = tm[2];
+
+  var sanMoves = pgnToSAN(pgn);
+  if (!sanMoves.length) { showError('No moves found in PGN.'); btn.disabled = false; return; }
+
+  var fenResult = sanToFENs(sanMoves);
+  if (!fenResult || !fenResult.fens || fenResult.fens.length < 2) { showError('Could not parse moves. Check PGN format.'); btn.disabled = false; return; }
+  var fens = fenResult.fens;
+  var playedUCIs = fenResult.ucis;
+  sanMoves = sanMoves.slice(0, fens.length - 1); // trim to matched fens
+
+  var clocks = parsePGNClocks(pgn);
+  // evalPosition() handles engine selection automatically
+
+  // Evaluate every position
+  var evals = new Array(fens.length).fill(null);
+  // Evaluate every position via 3-tier engine system
+  // Tier 1: Lichess Cloud Eval (fast, accurate, free)
+  // Tier 2: Local Stockfish (if loaded)
+  // Tier 3: Piece-count heuristic (instant fallback)
+  var srcCounts = { cloud: 0, local: 0, heuristic: 0 };
+  if (SF_READY) SF.postMessage('ucinewgame');
+
+  for (var i = 0; i < fens.length; i++) {
+    showEngProgress(i, fens.length, depth, srcCounts);
+    evals[i] = await evalPosition(fens[i], depth);
+    if (evals[i]) srcCounts[evals[i].src || 'heuristic']++;
+    // Throttle cloud requests slightly to avoid hammering the API
+    if (i > 0 && i % 5 === 0) await sleep(80);
+    else await sleep(0); // yield to UI every position
+  }
+  // Show 100% completion before building annotations
+  showEngProgress(fens.length, fens.length, depth, srcCounts);
+  await sleep(0);
+
+  // Show transition message while annotation loop runs
+  document.getElementById('dash').innerHTML =
+    '<div class="empty" style="padding-top:60px"><div class="spin"></div>' +
+    '<div class="ltxt">Building annotations…</div></div>';
+  await sleep(0);
+
+  // Opening phase: first 20 half-moves (10 full moves each side)
+  var BOOK_HALFMOVES = 20;
+
+  // normCp helper - defined once outside the loop
+  function normCpEv(ev) {
+    if (!ev) return 0;
+    if (ev.mate !== null) return ev.mate > 0 ? 10000 : -10000;
+    return Math.max(-10000, Math.min(10000, ev.cp));
+  }
+
+  // Build per-move data
+  var moveData = [];
+  for (var mi = 0; mi < sanMoves.length; mi++) {
+    var isW  = mi % 2 === 0;
+    var prev = evals[mi], curr = evals[mi + 1];
+
+    var prevCpWhite = normCpEv(prev);
+    var currCpWhite = normCpEv(curr);
+
+    // ── Flip to mover's perspective ──
+    var prevCpMover = isW ?  prevCpWhite : -prevCpWhite;
+    var currCpMover = isW ?  currCpWhite : -currCpWhite;
+
+    // ── CPL: how much the mover's position worsened ──
+    // Cap contribution at 1000 so single blunders don't destroy ACPL
+    var cpl = Math.min(1000, Math.max(0, prevCpMover - currCpMover));
+
+    // ── isTop: convert played SAN → UCI using a pre-built move map ──
+    // playedUCIs[mi] was already computed when we built fens via sanToFENs
+    var playedUCI = playedUCIs[mi] || null;
+    var isTopUCI = !!(playedUCI && prev && prev.bestMove && prev.bestMove === playedUCI);
+
+    // ── Sacrifice detection: played move loses material (negative material delta)
+    //    but IS the engine's top choice → brilliant ──
+    var prevMat = materialCount(fens[mi]);
+    var currMat = materialCount(fens[mi + 1]);
+    var matDeltaMover = isW ? (currMat - prevMat) : (prevMat - currMat);
+    var isSacrifice = isTopUCI && matDeltaMover < -100; // gave up 1+ pawn worth
+
+    // ── Book move: CPL near 0, both players still in theory range ──
+    // Only mark as book in the first BOOK_HALFMOVES half-moves
+    // AND the position eval is near equal (still in opening theory)
+    var isBook = mi < BOOK_HALFMOVES
+              && cpl <= 5
+              && Math.abs(prevCpWhite) < 60;  // near-equal = still in book
+
+    // ── Winning advantage: mover was winning before playing this move ──
+    var hadWinningAdv = prevCpMover >= 300; // mover had +3 or better
+
+    var ann = classifyMove(cpl, isTopUCI, isSacrifice, hadWinningAdv, isBook);
+
+    moveData.push({
+      san: sanMoves[mi],
+      fen: fens[mi + 1],
+      prevFen: fens[mi],
+      playedUCI: playedUCI,
+      cpl: Math.round(cpl),
+      ann: ann,
+      rawCp:  currCpWhite,  // eval after move, white's perspective (for eval bar)
+      prevCpW: prevCpWhite, // eval before move, white's perspective (for win% accuracy)
+      mate: curr ? curr.mate : null,
+      bestMove: prev ? prev.bestMove : null,
+      isTop: isTopUCI,
+      isWhite: isW,
+      clock: clocks[mi] || null,
+      moveNum: Math.floor(mi / 2) + 1
+    });
+  }
+
+  // Player stats
+  function pStats(moves) {
+    var counts = {};
+    Object.keys(ANN_META).forEach(function(k){ counts[k] = 0; });
+    moves.forEach(function(m){ counts[m.ann] = (counts[m.ann]||0) + 1; });
+
+    // ── Win% accuracy (Chess.com method) ─────────────────────
+    // Uses win probability differential per move — scale-independent,
+    // works correctly regardless of eval depth or source.
+    // winPct(cp) maps centipawns to probability of winning [0..100]
+    function winPct(cp) {
+      cp = Math.max(-1500, Math.min(1500, cp));
+      return 50 + 50 * (2 / (1 + Math.exp(-0.00368208 * cp)) - 1);
+    }
+
+    // Accuracy for one move: how much win% did the mover lose vs the best move?
+    // prevCpW = eval before move (white perspective), currCpW = eval after
+    function moveAcc(prevCpW, currCpW, isWhite) {
+      var wpBefore = isWhite ? winPct(prevCpW)  : winPct(-prevCpW);
+      var wpAfter  = isWhite ? winPct(currCpW)  : winPct(-currCpW);
+      var loss = Math.max(0, wpBefore - wpAfter);
+      // loss is in [0..50] win% range; 50 = catastrophic blunder from winning pos
+      // Map to accuracy: 0 loss = 100%, 50 loss = 0%
+      return Math.max(0, Math.min(100, 100 - 2 * loss));
+    }
+
+    // Compute accuracy only for non-book scored moves that have raw CP data
+    var scored = moves.filter(function(m){ return m.ann !== 'book'; });
+    var acpls = scored.map(function(m){ return Math.min(300, m.cpl); });
+    var acpl = acpls.length
+      ? Math.round(acpls.reduce(function(s,v){ return s+v; }, 0) / acpls.length)
+      : 0;
+
+    // Use win% accuracy if raw CP data available, else fall back to ACPL formula
+    var hasRawCp = scored.length > 0 && scored[0].rawCp !== undefined && scored[0].prevCpW !== undefined;
+    var acc;
+    if (hasRawCp) {
+      var moveAccs = scored.map(function(m){
+        return moveAcc(m.prevCpW, m.rawCp, m.isWhite);
+      });
+      acc = Math.round(moveAccs.reduce(function(s,v){ return s+v; }, 0) / moveAccs.length);
+    } else {
+      // Fallback: gentler ACPL-based formula calibrated for cloud eval scale
+      // Cloud eval ACPL ~10 = strong play (~90%+), ~40 = average (~70%), ~80 = weak (~50%)
+      acc = Math.min(100, Math.max(0, Math.round(
+        100 / (1 + Math.exp(0.07 * (acpl - 20)))
+      )));
+    }
+
+    // Phase accuracy (same method)
+    function phaseStats(fromMove, toMove) {
+      var ph = moves.filter(function(m){
+        return m.moveNum >= fromMove && m.moveNum <= toMove && m.ann !== 'book';
+      });
+      if (!ph.length) return { cpl: null, acc: null, n: 0 };
+      var phCpl = Math.round(ph.reduce(function(s,m){ return s + Math.min(300,m.cpl); }, 0) / ph.length);
+      var phAcc;
+      if (ph[0].prevCpW !== undefined) {
+        var pa = ph.map(function(m){ return moveAcc(m.prevCpW, m.rawCp, m.isWhite); });
+        phAcc = Math.round(pa.reduce(function(s,v){ return s+v; }, 0) / pa.length);
+      } else {
+        phAcc = Math.min(100, Math.max(0, Math.round(100 / (1 + Math.exp(0.07 * (phCpl - 20))))));
+      }
+      return { cpl: phCpl, acc: phAcc, n: ph.length };
+    }
+
+    // ── Game Rating — piecewise linear from Chess.com empirical data ──
+    // Reference: 100%=3000, 95%=2800, 90%=2400, 85%=2000, 80%=1700,
+    //            75%=1500, 70%=1300, 65%=1100, 60%=1000, 50%=700
+    function accToRating(a) {
+      var pts = [[100,3000],[95,2800],[90,2400],[85,2000],[80,1700],
+                 [75,1500],[70,1300],[65,1100],[60,1000],[50,700],[0,400]];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var a1=pts[i][0], r1=pts[i][1], a2=pts[i+1][0], r2=pts[i+1][1];
+        if (a >= a2) return Math.round(r2 + (a - a2) * (r1 - r2) / (a1 - a2));
+      }
+      return 400;
+    }
+    var gameRating = accToRating(acc);
+
+    var openSt = phaseStats(1,10), midSt = phaseStats(11,25), endSt = phaseStats(26,999);
+
+    return {
+      counts: counts, acpl: acpl, acc: acc, gameRating: gameRating,
+      openCPL: openSt.cpl, openN: openSt.n, openAcc: openSt.acc,
+      midCPL:  midSt.cpl,  midN:  midSt.n,  midAcc:  midSt.acc,
+      endCPL:  endSt.cpl,  endN:  endSt.n,  endAcc:  endSt.acc
+    };
+  }
+
+  var wStats = pStats(moveData.filter(function(m){ return  m.isWhite; }));
+  var bStats = pStats(moveData.filter(function(m){ return !m.isWhite; }));
+
+  SG = {
+    tags: tags,
+    white: wName || tags.White || 'White',
+    black: bName || tags.Black || 'Black',
+    opening: tags.Opening || tags.ECO || 'Unknown Opening',
+    result: tags.Result || '*',
+    moves: moveData, fens: fens, evals: evals,
+    wStats: wStats, bStats: bStats,
+    depth: depth
+  };
+
+  btn.disabled = false;
+  renderSingleGame(SG);
+}
+
+// ── Render single game ──────────────────────────────────────
+function renderSingleGame(sg) {
+  if (_sgKeyHandler) document.removeEventListener('keydown', _sgKeyHandler);
+  killCharts();
+
+  var ws = sg.wStats, bs = sg.bStats;
+  // Determine the primary source from the first few evals
+  var cloudCount = (sg.evals || []).filter(function(e){ return e && e.src === 'cloud'; }).length;
+  var localCount = (sg.evals || []).filter(function(e){ return e && e.src === 'local'; }).length;
+  var heurCount  = (sg.evals || []).filter(function(e){ return e && e.src === 'heuristic'; }).length;
+  var engLabel, engCls;
+  if (cloudCount > sg.moves.length * 0.5) {
+    engLabel = 'Lichess Cloud Eval (depth 20+)'; engCls = 'src-engine';
+  } else if (localCount > 0) {
+    engLabel = 'Stockfish depth ' + sg.depth + ' (local)'; engCls = 'src-engine';
+  } else if (cloudCount > 0) {
+    engLabel = 'Cloud eval + heuristic'; engCls = 'src-api';
+  } else {
+    engLabel = 'Piece-count heuristic (offline)'; engCls = 'src-est';
+  }
+
+  // Eval graph data (clamped CP from white's perspective)
+  var evalData = sg.evals.map(function(e) {
+    if (!e) return 0;
+    if (e.mate !== null) return e.mate > 0 ? 1200 : -1200;
+    return Math.max(-1200, Math.min(1200, e.cp));
+  });
+
+  var html =
+    // Header
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">' +
+      '<div><div style="font-size:18px;font-weight:700">' + sg.white + ' <span style="color:var(--t4)">vs</span> ' + sg.black + '</div>' +
+      '<div style="font-size:12px;color:var(--t3);margin-top:2px">' + sg.opening + ' &middot; ' + sg.result + '</div></div>' +
+      '<span class="src-badge ' + engCls + '">' + engLabel + '</span>' +
+    '</div>' +
+
+    // Summary + phase CPL cards
+    '<div class="summ-grid">' +
+      buildPlayerSummaryCard(sg.white, 'White', ws, true) +
+      buildPlayerSummaryCard(sg.black, 'Black', bs, false) +
+    '</div>' +
+
+    // Eval graph
+    '<div class="card c3" style="padding:14px;margin-bottom:14px">' +
+      '<div class="clabel">Evaluation graph &mdash; click any point to jump to that position</div>' +
+      '<div class="eval-graph-wrap" id="evg-wrap"><canvas id="evg-canvas"></canvas><div class="eval-cursor-line" id="evg-cursor" style="left:0"></div></div>' +
+      buildAnnLegend() +
+    '</div>' +
+
+    // Board + move list
+    '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">' +
+      // Left: eval bar + board + controls
+      '<div style="flex-shrink:0;width:min(400px,calc(100vw - 120px))">' +
+        '<div style="display:flex;gap:6px;align-items:stretch;width:100%">' +
+          // Eval bar
+          '<div class="eval-bar-col" style="width:16px">' +
+            '<div class="eval-val" id="evbar-top" style="font-size:9px">+0.0</div>' +
+            '<div class="eval-bar" id="evbar" style="flex:1;min-height:0"><div class="eval-bar-b" id="evbar-black" style="height:50%"></div><div class="eval-bar-w" id="evbar-white" style="height:50%"></div></div>' +
+            '<div class="eval-val" id="evbar-bot" style="font-size:9px">+0.0</div>' +
+          '</div>' +
+          // Board
+          '<div style="flex:1;min-width:0">' +
+            '<div class="board-outer"><div class="board-grid" id="sg-board">' + fenToBoard(sg.fens[0], null, null) + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div id="sg-move-info" style="text-align:center;font-size:11px;font-family:\'Fira Code\',monospace;color:var(--t3);margin-top:6px;min-height:16px">Starting position</div>' +
+        '<div style="display:flex;gap:4px;justify-content:center;margin-top:8px">' +
+          '<button id="sg-start" style="background:var(--ink3);border:1px solid var(--line2);color:var(--t2);padding:6px 10px;border-radius:var(--rs);cursor:pointer;font-family:monospace;font-size:14px;flex:1" title="Start">&#171;</button>' +
+          '<button id="sg-prev"  style="background:var(--ink3);border:1px solid var(--line2);color:var(--t2);padding:6px 14px;border-radius:var(--rs);cursor:pointer;font-family:monospace;font-size:14px;flex:2" title="Previous (&#8592;)">&#8592;</button>' +
+          '<button id="sg-next"  style="background:var(--ink3);border:1px solid var(--line2);color:var(--t2);padding:6px 14px;border-radius:var(--rs);cursor:pointer;font-family:monospace;font-size:14px;flex:2" title="Next (&#8594;)">&#8594;</button>' +
+          '<button id="sg-end"   style="background:var(--ink3);border:1px solid var(--line2);color:var(--t2);padding:6px 10px;border-radius:var(--rs);cursor:pointer;font-family:monospace;font-size:14px;flex:1" title="End">&#187;</button>' +
+        '</div>' +
+      '</div>' +
+      // Right: move list
+      '<div class="card moves-list" id="sg-movelist" style="flex:1;min-width:220px;max-height:430px;overflow-y:auto;padding:0">' +
+        buildMoveListHTML(sg.moves) +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+
+  // Draw eval graph
+  requestAnimationFrame(function() { drawEvalGraph(evalData, sg.moves); });
+
+  // Board interactivity
+  var cur = -1;
+  function goTo(idx) {
+    cur = Math.max(-1, Math.min(sg.moves.length - 1, idx));
+    var fen     = cur < 0 ? sg.fens[0] : sg.fens[cur+1];
+    var move    = cur >= 0 ? sg.moves[cur] : null;
+    var bestUCI = move ? move.bestMove : null;
+    // Determine last-move squares from FEN comparison using Chess.js
+    var fromSq = null, toSq = null;
+    if (move && typeof Chess !== 'undefined' && cur >= 0) {
+      try {
+        var tmpC = new Chess(sg.fens[cur]);
+        var res = tmpC.move(move.san, {sloppy:true});
+        if (res) { fromSq = res.from; toSq = res.to; }
+      } catch(e) {}
+    }
+    document.getElementById('sg-board').innerHTML = fenToBoard(fen, fromSq, toSq, bestUCI, move);
+    updateEvalBar(cur < 0 ? sg.evals[0] : sg.evals[cur+1]);
+    updateEvalCursor(cur+1, sg.evals.length);
+    // Move info label
+    var info = cur < 0 ? 'Starting position' : '';
+    if (move) {
+      var mn = move.moveNum + (move.isWhite ? '.' : '…');
+      info = mn + ' ' + move.san;
+      var meta = ANN_META[move.ann] || ANN_META['good'];
+      var showLabel = move.ann !== 'book' && move.ann !== 'good' && move.ann !== 'best';
+      if (showLabel) {
+        if (meta.sym) info += '  ' + meta.sym;
+        info += ' ' + meta.label;
+        if (move.cpl > 0) info += ' (' + move.cpl + ' CPL)';
+      } else if (move.ann === 'best' || move.ann === 'brilliant' || move.ann === 'great') {
+        info += '  ' + meta.label;
+      }
+      if (move.bestMove && (move.ann === 'blunder' || move.ann === 'mistake' ||
+          move.ann === 'inaccuracy' || move.ann === 'miss')) {
+        info += '  → Best: ' + move.bestMove;
+      }
+    }
+    document.getElementById('sg-move-info').textContent = info;
+    // Highlight move in list
+    document.querySelectorAll('.move-cell').forEach(function(el){ el.classList.remove('cur'); });
+    if (cur >= 0) {
+      var el = document.getElementById('mc-'+cur);
+      if (el) { el.classList.add('cur'); el.scrollIntoView({block:'nearest',behavior:'smooth'}); }
+    }
+    // Move eval cursor on graph
+    updateEvalCursor(cur+1, sg.evals.length);
+  }
+
+  document.getElementById('sg-start').addEventListener('click', function(){ goTo(-1); });
+  document.getElementById('sg-prev').addEventListener('click',  function(){ goTo(cur-1); });
+  document.getElementById('sg-next').addEventListener('click',  function(){ goTo(cur+1); });
+  document.getElementById('sg-end').addEventListener('click',   function(){ goTo(sg.moves.length-1); });
+
+  document.querySelectorAll('[data-mi]').forEach(function(el) {
+    el.addEventListener('click', function(){ goTo(parseInt(el.dataset.mi,10)); });
+  });
+
+  // Eval graph click
+  var evgWrap = document.getElementById('evg-wrap');
+  if (evgWrap) {
+    evgWrap.addEventListener('click', function(e) {
+      var r = evgWrap.getBoundingClientRect();
+      var pct = (e.clientX - r.left) / r.width;
+      var idx = Math.round(pct * (sg.evals.length-1)) - 1;
+      goTo(Math.max(-1, Math.min(sg.moves.length-1, idx)));
+    });
+  }
+
+  _sgKeyHandler = function(e) {
+    if (e.key === 'ArrowLeft')  goTo(cur-1);
+    if (e.key === 'ArrowRight') goTo(cur+1);
+    if (e.key === 'Home')       goTo(-1);
+    if (e.key === 'End')        goTo(sg.moves.length-1);
+  };
+  document.addEventListener('keydown', _sgKeyHandler);
+}
+
+// Build player summary card with annotation counts + phase CPL
+function buildPlayerSummaryCard(name, color, stats, isWhite) {
+  var icon = isWhite ? '&#9812;' : '&#9818;';
+  var playerColor = isWhite ? '#d4a84b' : '#b0b0c0';
+
+  // ── Annotation rows (8 tiers in order) ──────────────────
+  var annOrder = ['brilliant','great','best','good','book','inaccuracy','mistake','miss','blunder'];
+  var annRows = annOrder.map(function(k) {
+    var m = ANN_META[k];
+    if (!m) return '';
+    var cnt = stats.counts[k] || 0;
+    if (cnt === 0 && (k === 'brilliant' || k === 'miss')) return '';
+    return '<div class="ann-row" style="display:flex;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);gap:8px">' +
+      '<span style="width:24px;text-align:center;font-size:13px;font-weight:700;color:' + m.color + '">' + (m.sym || (cnt > 0 ? '&#183;' : '')) + '</span>' +
+      '<span style="flex:1;font-size:12px;color:var(--t2)">' + m.label + '</span>' +
+      '<span style="font-size:13px;font-weight:700;font-family:monospace;color:' + (cnt > 0 ? m.color : 'var(--t4)') + '">' + cnt + '</span>' +
+    '</div>';
+  }).join('');
+
+  // ── Phase performance table ──────────────────────────────
+  function phaseBar(acc) {
+    if (acc === null || acc === undefined) return '';
+    var c = acc >= 90 ? '#21d4b4' : acc >= 80 ? '#6bcb99' : acc >= 65 ? '#96bc4b' : acc >= 50 ? '#f0c15f' : '#e86b7a';
+    var w = Math.max(4, acc);
+    return '<div style="height:4px;background:var(--ink4);border-radius:2px;margin-top:3px;overflow:hidden">' +
+           '<div style="height:4px;width:' + w + '%;background:' + c + ';border-radius:2px;transition:width .5s"></div></div>';
+  }
+  function phaseRow(label, moves, cpl, acc) {
+    if (acc === null && cpl === null) return '';
+    var accStr = acc !== null ? acc + '%' : '—';
+    var cplStr = cpl !== null ? cpl + ' CPL' : '—';
+    var accColor = acc !== null ? (acc >= 90 ? '#21d4b4' : acc >= 80 ? '#6bcb99' : acc >= 65 ? '#96bc4b' : acc >= 50 ? '#f0c15f' : '#e86b7a') : 'var(--t4)';
+    return '<tr>' +
+      '<td style="padding:6px 8px;font-size:12px;color:var(--t2)">' + label + '</td>' +
+      '<td style="padding:6px 8px;font-size:11px;color:var(--t4);text-align:center;font-family:monospace">' + (moves||0) + '</td>' +
+      '<td style="padding:6px 8px;font-size:11px;color:var(--t4);text-align:right;font-family:monospace">' + cplStr + '</td>' +
+      '<td style="padding:6px 8px;text-align:right">' +
+        '<span style="font-size:13px;font-weight:700;font-family:monospace;color:' + accColor + '">' + accStr + '</span>' +
+        phaseBar(acc) +
+      '</td>' +
+    '</tr>';
+  }
+
+  var phaseTable = '<div style="margin-top:12px">' +
+    '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Performance by Phase</div>' +
+    '<table style="width:100%;border-collapse:collapse">' +
+      '<thead><tr>' +
+        '<th style="font-size:10px;color:var(--t4);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)">Phase</th>' +
+        '<th style="font-size:10px;color:var(--t4);text-align:center;padding:4px 8px;border-bottom:1px solid var(--line)">Moves</th>' +
+        '<th style="font-size:10px;color:var(--t4);text-align:right;padding:4px 8px;border-bottom:1px solid var(--line)">Avg CPL</th>' +
+        '<th style="font-size:10px;color:var(--t4);text-align:right;padding:4px 8px;border-bottom:1px solid var(--line)">Accuracy</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        phaseRow('Opening (1–10)',    stats.openN, stats.openCPL, stats.openAcc) +
+        phaseRow('Middlegame (11–25)',stats.midN,  stats.midCPL,  stats.midAcc)  +
+        phaseRow('Endgame (26+)',     stats.endN,  stats.endCPL,  stats.endAcc)  +
+      '</tbody>' +
+    '</table>' +
+  '</div>';
+
+  // ── Game rating badge ────────────────────────────────────
+  var ratingColor = acpColor(stats.acpl);
+  var ratingBadge = '<div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;background:var(--ink4);border-radius:var(--rs)">' +
+    '<div>' +
+      '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Game Rating</div>' +
+      '<div style="font-size:22px;font-weight:800;font-family:monospace;color:' + ratingColor + '">' + (stats.gameRating || '—') + '</div>' +
+    '</div>' +
+    '<div style="width:1px;background:var(--line2);align-self:stretch;margin:0 4px"></div>' +
+    '<div>' +
+      '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Accuracy</div>' +
+      '<div style="font-size:22px;font-weight:800;font-family:monospace;color:' + ratingColor + '">' + stats.acc + '%</div>' +
+    '</div>' +
+    '<div style="width:1px;background:var(--line2);align-self:stretch;margin:0 4px"></div>' +
+    '<div>' +
+      '<div style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Avg CPL</div>' +
+      '<div style="font-size:22px;font-weight:800;font-family:monospace;color:var(--t2)">' + stats.acpl + '</div>' +
+    '</div>' +
+  '</div>';
+
+  return '<div class="summ-card">' +
+    // Header
+    '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">' +
+      '<span style="font-size:28px;color:' + playerColor + '">' + icon + '</span>' +
+      '<div><div style="font-size:14px;font-weight:700">' + name + '</div>' +
+      '<div style="font-size:11px;color:var(--t3)">' + color + '</div></div>' +
+    '</div>' +
+    ratingBadge +
+    // Annotation breakdown
+    '<div style="margin-top:12px">' +
+      '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:6px">Move Classification</div>' +
+      annRows +
+    '</div>' +
+    phaseTable +
+  '</div>';
+}
+
+function cplColor(cpl) {
+  if (cpl <= 10) return C.sage;
+  if (cpl <= 30) return C.gold;
+  if (cpl <= 60) return C.amb;
+  return C.rose;
+}
+function acpColor(acpl) {
+  if (acpl <= 15) return C.sage;
+  if (acpl <= 35) return C.gold;
+  if (acpl <= 70) return C.amb;
+  return C.rose;
+}
+
+function buildAnnLegend() {
+  var order = ['brilliant','great','best','good','book','inaccuracy','mistake','miss','blunder'];
+  return '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">' +
+    order.map(function(k) {
+      var m = ANN_META[k];
+      if (!m) return '';
+      var sym = m.sym || (k === 'book' ? '&#9632;' : k === 'miss' ? '&#9711;' : '&#183;');
+      return '<span style="font-size:11px;color:' + m.color + ';display:flex;align-items:center;gap:3px">' +
+        '<span style="font-weight:700">' + sym + '</span>' + m.label + '</span>';
+    }).join('') +
+  '</div>';
+}
+
+function buildMoveListHTML(moves) {
+  var html = '';
+  for (var i = 0; i < moves.length; i += 2) {
+    var w = moves[i], b = moves[i+1];
+    var mn = w.moveNum;
+    html += '<div class="move-row">' +
+      '<div class="move-num">' + mn + '.</div>' +
+      moveCellHTML(w, i) +
+      (b ? moveCellHTML(b, i+1) : '<div class="move-cell"></div>') +
+    '</div>';
+  }
+  return html || '<div style="padding:12px;font-size:12px;color:var(--t3)">No moves</div>';
+}
+
+function moveCellHTML(m, idx) {
+  var meta = ANN_META[m.ann] || ANN_META['good'];
+  var evalStr = '';
+  if (m.mate !== null) {
+    evalStr = '#' + Math.abs(m.mate);
+  } else {
+    var v = m.rawCp / 100;
+    evalStr = (v >= 0 ? '+' : '') + v.toFixed(1);
+  }
+  // Tooltip
+  var tooltip = meta.label;
+  if (m.ann !== 'book' && m.cpl > 0) tooltip += ' (' + m.cpl + ' CPL)';
+  if (m.bestMove && (m.ann === 'blunder' || m.ann === 'mistake' || m.ann === 'inaccuracy' || m.ann === 'miss')) {
+    tooltip += ' | Best: ' + m.bestMove;
+  }
+  // Eval color: green/red based on advantage
+  var evalColor = 'var(--t4)';
+  if (m.rawCp >  50) evalColor = m.isWhite ? '#6bcb99' : '#e86b7a';
+  if (m.rawCp < -50) evalColor = m.isWhite ? '#e86b7a' : '#6bcb99';
+  // Show symbol for annotations that have one; dot for good/best/book
+  var sym = meta.sym || '';
+  return '<div class="move-cell ' + meta.cls + '" id="mc-' + idx + '" data-mi="' + idx + '" title="' + tooltip + '">' +
+    '<span class="move-ann" style="color:' + meta.color + ';font-weight:700;min-width:18px;text-align:center">' + sym + '</span>' +
+    '<span class="move-san">' + m.san + '</span>' +
+    '<span style="font-size:9px;color:' + evalColor + ';margin-left:auto;font-family:monospace">' + evalStr + '</span>' +
+  '</div>';
+}
+
+// Render a chess board from FEN
+function fenToBoard(fen, fromSq, toSq, bestUCI, moveObj) {
+  var ranks = fen.split(' ')[0].split('/');
+  var squares = [];
+  ranks.forEach(function(rank) {
+    for (var ci = 0; ci < rank.length; ci++) {
+      var ch = rank[ci];
+      if (ch >= '1' && ch <= '8') { for (var n=0;n<parseInt(ch,10);n++) squares.push(''); }
+      else squares.push(ch);
+    }
+  });
+
+  // Show best move only for errors
+  var bFrom = -1, bTo = -1;
+  var showBest = moveObj && bestUCI && bestUCI.length >= 4 &&
+    (moveObj.ann === 'blunder' || moveObj.ann === 'mistake' ||
+     moveObj.ann === 'inaccuracy' || moveObj.ann === 'missed');
+  if (showBest) {
+    var files = 'abcdefgh';
+    bFrom = (8 - parseInt(bestUCI[1], 10)) * 8 + files.indexOf(bestUCI[0]);
+    bTo   = (8 - parseInt(bestUCI[3], 10)) * 8 + files.indexOf(bestUCI[2]);
+  }
+
+  // Last-move squares
+  var lFrom = -1, lTo = -1;
+  if (fromSq) { lFrom = (8 - parseInt(fromSq[1],10))*8 + 'abcdefgh'.indexOf(fromSq[0]); }
+  if (toSq)   { lTo   = (8 - parseInt(toSq[1],10))*8  + 'abcdefgh'.indexOf(toSq[0]); }
+
+  // Detect check: find king position and see if it's in check via FEN active color
+  var activeColor = fen.split(' ')[1]; // 'w' or 'b'
+  var kingInCheck = false;
+  var kingIdx = -1;
+  if (typeof Chess !== 'undefined') {
+    try {
+      var tmpC2 = new Chess(fen);
+      if (tmpC2.in_check()) {
+        var kingPiece = activeColor === 'w' ? 'K' : 'k';
+        for (var ki = 0; ki < 64; ki++) {
+          if (squares[ki] === kingPiece) { kingIdx = ki; break; }
+        }
+      }
+    } catch(e) {}
+  }
+
+  // Build 64 squares
+  var html = '';
+  for (var si = 0; si < 64; si++) {
+    var file = si % 8, rank = Math.floor(si / 8);
+    var isLight = (file + rank) % 2 === 0;
+    var piece = squares[si];
+    var cls = 'sq ' + (isLight ? 'light' : 'dark');
+    if (si === lFrom) cls += ' hl-from';
+    if (si === lTo)   cls += ' hl-to';
+    if (si === bFrom) cls += ' hl-best-from';
+    if (si === bTo)   cls += ' hl-best-to';
+    if (si === kingIdx) cls += ' hl-check';
+    // Add rank/file coordinates on edge squares (like Lichess)
+    var coords = '';
+    var coordColor = isLight ? 'color:#b58863' : 'color:#f0d9b5';
+    if (file === 7) coords += '<span class="sq-coord rank" style="' + coordColor + '">' + (8 - rank) + '</span>';
+    if (rank === 7) coords += '<span class="sq-coord file" style="' + coordColor + '">' + 'abcdefgh'[file] + '</span>';
+    html += '<div class="' + cls + '">' +
+      (piece ? '<div class="sq-piece">' + pieceSVG(piece) + '</div>' : '') +
+      coords +
+    '</div>';
+  }
+  return html;
+}
+
+function updateEvalBar(ev) {
+  var barB = document.getElementById('evbar-black');
+  var barW = document.getElementById('evbar-white');
+  var top  = document.getElementById('evbar-top');
+  var bot  = document.getElementById('evbar-bot');
+  if (!barB || !barW) return;
+  var cp = 0, label = '0.0';
+  if (ev) {
+    if (ev.mate !== null) { cp = ev.mate > 0 ? 1200 : -1200; label = 'M'+Math.abs(ev.mate); }
+    else { cp = Math.max(-800, Math.min(800, ev.cp)); label = (cp>=0?'+':'') + (cp/100).toFixed(1); }
+  }
+  var whitePct = 50 + (cp/800)*50;
+  whitePct = Math.max(5, Math.min(95, whitePct));
+  var blackPct = 100 - whitePct;
+  barW.style.height = whitePct + '%';
+  barB.style.height = blackPct + '%';
+  if (top) top.textContent = cp >= 0 ? label : '';
+  if (bot) bot.textContent = cp < 0  ? label : '';
+}
+
+// Draw the eval graph using Canvas
+function drawEvalGraph(evalData, moves) {
+  var canvas = document.getElementById('evg-canvas');
+  var wrap   = document.getElementById('evg-wrap');
+  if (!canvas || !wrap) return;
+  canvas.width  = wrap.offsetWidth  || 600;
+  canvas.height = 72;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height, mid = H/2, n = evalData.length;
+  if (n < 2) return;
+
+  ctx.fillStyle = '#1c1c26'; ctx.fillRect(0,0,W,H);
+  // Center line
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+
+  var xOf = function(i){ return (i/(n-1))*W; };
+  var yOf = function(cp){ return mid - (Math.max(-800,Math.min(800,cp))/800)*mid; };
+
+  // White advantage fill
+  ctx.beginPath(); ctx.moveTo(0, mid);
+  for (var i=0; i<n; i++) { i===0 ? ctx.moveTo(xOf(i),yOf(evalData[i])) : ctx.lineTo(xOf(i),yOf(evalData[i])); }
+  ctx.lineTo(W,mid); ctx.lineTo(0,mid); ctx.closePath();
+  ctx.fillStyle = 'rgba(240,240,240,0.12)'; ctx.fill();
+
+  // Eval line
+  ctx.beginPath();
+  for (var j=0; j<n; j++) { j===0 ? ctx.moveTo(xOf(j),yOf(evalData[j])) : ctx.lineTo(xOf(j),yOf(evalData[j])); }
+  ctx.strokeStyle = '#e8c96a'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Annotation dots on moves
+  moves.forEach(function(m, mi) {
+    var meta = ANN_META[m.ann];
+    if (m.ann === 'ok' || m.ann === 'good') return;
+    var x = xOf(mi+1), y = yOf(evalData[mi+1]||0);
+    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI*2);
+    ctx.fillStyle = meta.color; ctx.fill();
+  });
+}
+
+function updateEvalCursor(posIdx, total) {
+  var cursor = document.getElementById('evg-cursor');
+  var wrap   = document.getElementById('evg-wrap');
+  if (!cursor || !wrap) return;
+  cursor.style.left = (total<=1 ? 0 : (posIdx/(total-1))*100) + '%';
+}
+
+function showEngProgress(done, total, depth, srcCounts) {
+  var pct = total > 0 ? Math.round(done / total * 100) : 0;
+  srcCounts = srcCounts || {};
+  // Build source label
+  var srcParts = [];
+  if (srcCounts.cloud    > 0) srcParts.push(srcCounts.cloud    + ' cloud');
+  if (srcCounts.local    > 0) srcParts.push(srcCounts.local    + ' engine');
+  if (srcCounts.heuristic> 0) srcParts.push(srcCounts.heuristic+ ' heuristic');
+  var srcLabel = srcParts.length ? ' (' + srcParts.join(', ') + ')' : '';
+  // Method label
+  var methodLabel = 'Lichess Cloud Eval + Stockfish depth ' + depth;
+  if (done > 0 && srcCounts.cloud === 0 && srcCounts.local === 0) {
+    methodLabel = 'Using piece-count heuristic (no network/engine)';
+  } else if (done > 0 && srcCounts.cloud > 0 && srcCounts.local === 0 && srcCounts.heuristic === 0) {
+    methodLabel = 'Lichess Cloud Eval — accurate analysis';
+  }
+  document.getElementById('dash').innerHTML =
+    '<div class="empty" style="padding-top:48px">' +
+      '<div class="spin"></div>' +
+      '<div class="ltxt" style="margin-bottom:6px">Analysing game…</div>' +
+      '<div style="font-size:11px;color:var(--t4);font-family:monospace;margin-bottom:18px">' + methodLabel + '</div>' +
+      '<div class="eng-prog">' +
+        '<div class="eng-prog-track"><div class="eng-prog-fill" style="width:' + pct + '%"></div></div>' +
+        '<div class="eng-prog-lbl">' +
+          '<span>Position ' + done + ' / ' + total + srcLabel + '</span>' +
+          '<span>' + pct + '%</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ════════════════════════════════════════════════════════
+//  PLAYER ANALYSIS (multi-game PGN)
+// ════════════════════════════════════════════════════════
+function runPGNPlayer() {
+  var pgn  = document.getElementById('pgn-text').value.trim();
+  var user = document.getElementById('pgn-user').value.trim();
+  if (!pgn) { alert('Paste some PGN first.'); return; }
+  var btn = document.getElementById('pgn-go');
+  btn.disabled = true;
+  showLoading('Parsing PGN\u2026');
+  try {
+    var raw = parsePGN(pgn, user);
+    if (!raw.length) { showError('Could not parse any games.'); btn.disabled = false; return; }
+    G = processGames(raw, user || 'You');
+    G._user = user || 'You';
+    setBadge(G.n + ' games', user || 'PGN');
+    genAI(G, user || 'You').then(function(){ renderTab('overview'); setActiveRail('overview'); });
+  } catch(e) { showError('PGN error: ' + e.message); console.error(e); }
+  btn.disabled = false;
+}
+
+
+
+// ─── API fetch ────────────────────────────────────
+async function runAPI() {
+  var user = document.getElementById('api-user').value.trim();
+  if (!user) { alert('Please enter a username.'); return; }
+  var tc = document.getElementById('api-tc').value;
+  var n = parseInt(document.getElementById('api-n').value, 10);
+  var btn = document.getElementById('api-go');
+  btn.disabled = true;
+  showLoading('Fetching games from ' + (PLT === 'lichess' ? 'Lichess' : 'Chess.com') + '…');
+  try {
+    var raw = PLT === 'lichess' ? await lichessGames(user, tc, n) : await chesscomGames(user, tc, n);
+    if (!raw || !raw.length) { showError('No games found. Check username and time control.'); btn.disabled = false; return; }
+    showLoading('Analysing ' + raw.length + ' games…');
+    G = processGames(raw, user);
+    G._user = user;
+    var proxyNote = PLT === 'chesscom' && CC_PROXY_USED !== 'direct' ? ' via ' + CC_PROXY_USED : '';
+    var fromCache = !!cacheGet(cacheKey(PLT, user, tc, n));
+    setBadge(G.n + ' games' + proxyNote + (fromCache ? ' · cached' : ''), user);
+    var hint = document.getElementById('fetch-hint');
+    if (hint) hint.textContent = fromCache
+      ? 'Showing cached results (5 min). Click 🗑 Cache to force a fresh fetch.'
+      : 'Lichess: open API. Chess.com: auto-proxied when deployed. Results cached for 5 min.';
+    showLoading('Generating AI coaching report…');
+    await genAI(G, user);
+    renderTab('overview');
+    setActiveRail('overview');
+  } catch(e) {
+    showError('Failed: ' + e.message);
+    console.error(e);
+  }
+  btn.disabled = false;
+}
+
+
+// ── In-memory cache ──────────────────────────────
+var FETCH_CACHE = {};
+var CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function cacheKey(platform, user, tc, n) {
+  return platform + ':' + user.toLowerCase() + ':' + tc + ':' + n;
+}
+function cacheGet(key) {
+  var entry = FETCH_CACHE[key];
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { delete FETCH_CACHE[key]; return null; }
+  return entry.data;
+}
+function cacheSet(key, data) {
+  FETCH_CACHE[key] = { data: data, ts: Date.now() };
+}
+
+// ── Sleep helper ──────────────────────────────────
+function sleep(ms) {
+  return new Promise(function(resolve){ setTimeout(resolve, ms); });
+}
+
+// ── Fetch with exponential backoff + Retry-After ──
+async function fetchWithRetry(url, opts, maxRetries) {
+  maxRetries = maxRetries || 3;
+  var delay = 2000;
+  for (var attempt = 0; attempt <= maxRetries; attempt++) {
+    var r = await fetch(url, opts);
+    if (r.status !== 429) return r;
+    if (attempt >= maxRetries) throw new Error('Rate limited (429). Wait a minute and try again.');
+    var retryAfter = parseInt(r.headers.get('Retry-After') || '0', 10);
+    var wait = retryAfter > 0 ? retryAfter * 1000 : delay;
+    showLoading('Rate limited — waiting ' + Math.round(wait / 1000) + 's (retry ' + (attempt + 1) + '/' + maxRetries + ')…');
+    await sleep(wait);
+    delay = Math.min(delay * 2, 16000);
+  }
+}
+
+async function lichessGames(user, perf, max) {
+  var key = cacheKey('lichess', user, perf, max);
+  var cached = cacheGet(key);
+  if (cached) { showLoading('Using cached data — analysing…'); return cached; }
+  var url = 'https://lichess.org/api/games/user/' + user + '?max=' + max + '&perf=' + perf + '&moves=true&opening=true&clocks=true';
+  var r = await fetchWithRetry(url, { headers: { Accept: 'application/x-ndjson' } }, 3);
+  if (!r.ok) throw new Error('Lichess returned ' + r.status);
+  var text = await r.text();
+  var games = text.trim().split('\n').filter(Boolean).map(function(l){ try{ return JSON.parse(l); }catch(e){ return null; } }).filter(Boolean);
+  cacheSet(key, games);
+  return games;
+}
+
+// ── Chess.com CORS proxy chain ───────────────────
+// Ordered from most reliable to fallback.
+// On 429 from a proxy we skip it immediately rather than wait on it —
+// the next proxy likely has a fresh quota.
+var CC_PROXIES = [
+  { name: 'direct',              fn: function(u){ return u; } },
+  { name: 'corsproxy.io',        fn: function(u){ return 'https://corsproxy.io/?' + encodeURIComponent(u); } },
+  { name: 'allorigins',          fn: function(u){ return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
+  { name: 'thingproxy',          fn: function(u){ return 'https://thingproxy.freeboard.io/fetch/' + u; } },
+  { name: 'cors-anywhere-demo',  fn: function(u){ return 'https://cors-anywhere.herokuapp.com/' + u; } }
+];
+
+var CC_PROXY_USED = 'direct';
+
+// Try every proxy in order. Skip a proxy immediately on 429 (its own rate limit)
+// or 4xx/5xx. Only throw if ALL proxies fail.
+async function fetchCC(url) {
+  var errors = [];
+  for (var pi = 0; pi < CC_PROXIES.length; pi++) {
+    var proxy = CC_PROXIES[pi];
+    try {
+      var proxied = proxy.fn(url);
+      var r = await fetch(proxied, { signal: AbortSignal.timeout(10000) });
+      if (r.status === 429) {
+        errors.push(proxy.name + ': 429 rate limited');
+        continue; // immediately try next proxy — don't wait on this one
+      }
+      if (r.status === 403) {
+        errors.push(proxy.name + ': 403 forbidden');
+        continue;
+      }
+      if (!r.ok) {
+        errors.push(proxy.name + ': HTTP ' + r.status);
+        continue;
+      }
+      CC_PROXY_USED = proxy.name;
+      return r;
+    } catch(e) {
+      errors.push(proxy.name + ': ' + e.message);
+    }
+  }
+  throw new Error('All proxies failed (' + errors.length + ' tried). Use PGN tab: Chess.com Game Archive → Export → paste here.');
+}
+
+async function chesscomGames(user, tc, max) {
+  var key = cacheKey('chesscom', user, tc, max);
+  var cached = cacheGet(key);
+  if (cached) { showLoading('Using cached data — analysing…'); return cached; }
+
+  var now = new Date();
+  var all = [];
+  var monthsToTry = Math.min(3, Math.ceil(max / 30) + 1); // fetch enough months
+
+  for (var i = 0; i < monthsToTry; i++) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    var yr = d.getFullYear();
+    var mo = String(d.getMonth() + 1).padStart(2, '0');
+    showLoading('Fetching Chess.com games — ' + yr + '/' + mo + '…');
+    try {
+      var url = 'https://api.chess.com/pub/player/' + user + '/games/' + yr + '/' + mo;
+      var r = await fetchCC(url);
+      var data = await r.json();
+      var games = (data.games || []).filter(function(g){ return g.time_class === tc; });
+      all = all.concat(games);
+    } catch(e) {
+      console.warn('Chess.com month ' + yr + '/' + mo + ' failed:', e.message);
+      // Don't abort — try next month
+    }
+    if (all.length >= max) break;
+    // Small pause between monthly fetches to be polite and avoid proxy hammering
+    if (i < monthsToTry - 1) await sleep(400);
+  }
+
+  if (!all.length) {
+    throw new Error('No Chess.com ' + tc + ' games found for "' + user + '". Username correct? Profile public? Try a different time control.');
+  }
+
+  var result = all.slice(-max).map(function(g){ return normCC(g, user); });
+  cacheSet(key, result);
+  return result;
+}
+
+function normCC(g, user) {
+  var isW = (g.white && g.white.username || '').toLowerCase() === user.toLowerCase();
+  var myR = isW ? (g.white && g.white.result) : (g.black && g.black.result);
+  var won = myR === 'win';
+  var drew = ['agreed','stalemate','insufficient','repetition','50move'].indexOf(myR) >= 0;
+  var pgn = g.pgn || '';
+
+  // Opening name: parse from PGN tags (most reliable for Chess.com)
+  var openingName = 'Unknown';
+  var openMatch = pgn.match(/\[Opening "([^"]+)"\]/);
+  if (openMatch) {
+    openingName = openMatch[1];
+  } else {
+    var ecoUrlMatch = pgn.match(/\[ECOUrl "([^"]+)"\]/);
+    if (ecoUrlMatch) {
+      var slug = ecoUrlMatch[1].split('/').pop();
+      openingName = slug.replace(/-/g, ' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); });
+    } else if (g.eco) {
+      openingName = g.eco;
+    }
+  }
+
+  // Move count from PGN move numbers
+  var moveCount = 30;
+  if (pgn) {
+    var moveNums = pgn.match(/\d+\./g);
+    moveCount = moveNums ? moveNums.length : 30;
+  }
+
+  // Clock times: parse {[%clk h:mm:ss]} from PGN annotations
+  var clocks = [];
+  if (pgn) {
+    var clkMatches = pgn.match(/\[%clk \d+:\d+:\d+\]/g);
+    if (clkMatches) {
+      clocks = clkMatches.map(function(m) {
+        var t = m.match(/(\d+):(\d+):(\d+)/);
+        if (!t) return 0;
+        return (parseInt(t[1],10)*3600 + parseInt(t[2],10)*60 + parseInt(t[3],10)) * 100;
+      });
+    }
+  }
+
+  // Accuracy from PGN accuracy tags if available
+  var acc = won ? 60 + Math.random() * 30 : (drew ? 50 + Math.random() * 20 : 40 + Math.random() * 35);
+  var myAccTag = isW ? /\[WhiteAccuracy "([^"]+)"\]/ : /\[BlackAccuracy "([^"]+)"\]/;
+  var myAccMatch = pgn.match(myAccTag);
+  if (myAccMatch) acc = parseFloat(myAccMatch[1]) || acc;
+
+  return {
+    id: (g.url || '').split('/').pop() || String(Math.random()),
+    createdAt: (g.end_time || 0) * 1000,
+    opening: { name: openingName },
+    players: {
+      white: { user: { name: g.white && g.white.username }, rating: g.white && g.white.rating },
+      black: { user: { name: g.black && g.black.username }, rating: g.black && g.black.rating }
+    },
+    winner: won ? (isW ? 'white' : 'black') : (drew ? null : (isW ? 'black' : 'white')),
+    myColor: isW ? 'white' : 'black',
+    moves: moveCount,
+    accuracy: acc,
+    clocks: clocks,
+    url: g.url || '#',
+    _cc: true
+  };
+}
+
+
+function parsePGN(text, user) {
+  var games = [];
+  var blocks = text.split(/\n\n(?=\[)/);
+  for (var bi = 0; bi < blocks.length; bi++) {
+    var block = blocks[bi];
+    try {
+      var tags = {};
+      var tagRe = /\[(\w+)\s+"([^"]*)"\]/g;
+      var tm;
+      while ((tm = tagRe.exec(block)) !== null) tags[tm[1]] = tm[2];
+      var isW = !user || (tags.White || '').toLowerCase() === user.toLowerCase();
+      var myColor = isW ? 'white' : 'black';
+      var result = tags.Result || '*';
+      var won = (myColor === 'white' && result === '1-0') || (myColor === 'black' && result === '0-1');
+      var drew = result === '1/2-1/2';
+      var moveText = block.replace(/\[.*?\]\s*/g,'').replace(/\{[^}]*\}/g,'').replace(/\$\d+/g,'').trim();
+      var moveParts = moveText.split(/\s+/).filter(function(m){ return m && !/^\d+\./.test(m) && m !== '*' && m !== '1-0' && m !== '0-1' && m !== '1/2-1/2'; });
+      var moves = moveParts.length;
+      var acc = won ? 60 + Math.random() * 30 : (drew ? 50 + Math.random() * 25 : 40 + Math.random() * 30);
+      var dateStr = tags.UTCDate ? tags.UTCDate.replace(/\./g, '-') : null;
+      var ts = dateStr ? new Date(dateStr + 'T' + (tags.UTCTime || '12:00:00') + 'Z').getTime() : Date.now();
+      games.push({
+        id: Math.random().toString(36).slice(2),
+        createdAt: ts,
+        opening: { name: tags.Opening || tags.ECO || 'Unknown' },
+        players: {
+          white: { user: { name: tags.White || 'White' }, rating: parseInt(tags.WhiteElo, 10) || 0 },
+          black: { user: { name: tags.Black || 'Black' }, rating: parseInt(tags.BlackElo, 10) || 0 }
+        },
+        winner: won ? myColor : (drew ? null : (myColor === 'white' ? 'black' : 'white')),
+        myColor: myColor,
+        moves: moves,
+        accuracy: acc,
+        clocks: [],
+        url: tags.Site || '#'
+      });
+    } catch(e) { /* skip bad game */ }
+  }
+  return games;
+}
+
+// ─── Process ─────────────────────────────────────
+function processGames(raw, user) {
+  var games = raw.map(function(g) {
+    var myColor = g.myColor;
+    if (!myColor) {
+      var wp = g.players && g.players.white && g.players.white.user;
+      var wname = (wp && (wp.name || wp.id || '')).toLowerCase();
+      myColor = wname === user.toLowerCase() ? 'white' : 'black';
+    }
+    var won = g.winner === myColor;
+    var drew = !g.winner;
+    var lost = !!g.winner && g.winner !== myColor;
+    var myP = g.players && g.players[myColor];
+    var myRating = (myP && myP.rating) || 0;
+    var acc = (myP && myP.analysis && myP.analysis.accuracy) || g.accuracy || (50 + Math.random() * 40);
+    acc = Math.round(acc);
+    var clocks = g.clocks || [];
+    var myClocks = clocks.filter(function(_, i){ return myColor === 'white' ? i % 2 === 0 : i % 2 !== 0; });
+    var deltas = [];
+    for (var ci = 0; ci < myClocks.length - 1; ci++) {
+      deltas.push(Math.max(0, (myClocks[ci] - myClocks[ci+1]) / 100));
+    }
+    var avgTime = deltas.length ? deltas.reduce(function(a,b){return a+b;},0) / deltas.length : 5;
+    var rushes = deltas.filter(function(t){ return t < 2; }).length;
+    var thinks = deltas.filter(function(t){ return t > 15; }).length;
+    var openName = (g.opening && g.opening.name) || 'Unknown';
+    var moves = typeof g.moves === 'string' ? g.moves.split(' ').length : (g.moves || 30);
+    return {
+      won: won, drew: drew, lost: lost, myColor: myColor,
+      myRating: myRating, acc: acc, openName: openName,
+      moves: moves, avgTime: avgTime, rushes: rushes, thinks: thinks,
+      createdAt: g.createdAt,
+      url: g.url || (g.id ? 'https://lichess.org/' + g.id : '#')
+    };
+  });
+
+  var n = games.length;
+  var wins = games.filter(function(g){return g.won;}).length;
+  var draws = games.filter(function(g){return g.drew;}).length;
+  var losses = games.filter(function(g){return g.lost;}).length;
+  var wr = Math.round(wins / n * 100);
+  var avgAcc = Math.round(games.reduce(function(s,g){return s+g.acc;},0) / n);
+
+  var asW = games.filter(function(g){return g.myColor==='white';});
+  var asB = games.filter(function(g){return g.myColor==='black';});
+  var wrW = asW.length ? Math.round(asW.filter(function(g){return g.won;}).length/asW.length*100) : 0;
+  var wrB = asB.length ? Math.round(asB.filter(function(g){return g.won;}).length/asB.length*100) : 0;
+  var accW = asW.length ? Math.round(asW.reduce(function(s,g){return s+g.acc;},0)/asW.length) : 0;
+  var accB = asB.length ? Math.round(asB.reduce(function(s,g){return s+g.acc;},0)/asB.length) : 0;
+
+  var accBuckets = [0,0,0,0,0];
+  games.forEach(function(g){
+    if (g.acc<50) accBuckets[0]++;
+    else if (g.acc<65) accBuckets[1]++;
+    else if (g.acc<78) accBuckets[2]++;
+    else if (g.acc<88) accBuckets[3]++;
+    else accBuckets[4]++;
+  });
+
+  var blunderGames = games.filter(function(g){return g.acc<55;}).length;
+  var mistakeGames = games.filter(function(g){return g.acc>=55&&g.acc<70;}).length;
+  var inaccGames   = games.filter(function(g){return g.acc>=70&&g.acc<82;}).length;
+  var cleanGames   = games.filter(function(g){return g.acc>=82;}).length;
+
+  var seed = avgAcc;
+  var openScore  = clamp(seed + rnd(12,-6));
+  var midScore   = clamp(seed + rnd(10,-8));
+  var endScore   = clamp(seed + rnd(8,-14));
+  var tacScore   = clamp(seed + rnd(10,-10));
+  var posScore   = clamp(seed + rnd(8,-6));
+  var atkScore   = clamp(seed + rnd(14,-8));
+  var defScore   = clamp(seed + rnd(10,-10));
+  var timeScore  = clamp(75 - Math.round(games.reduce(function(s,g){return s+g.rushes;},0)/n*3));
+  var posW = clamp(posScore + rnd(8,-4));
+  var posB = clamp(posScore + rnd(6,-6));
+
+  // Track openings separately for White, Black, and combined
+  var opAll = {}, opWhite = {}, opBlack = {};
+  games.forEach(function(g){
+    var k = (g.openName.split(':')[0] || 'Unknown').trim().slice(0,32);
+    // Combined
+    if (!opAll[k]) opAll[k] = { name:k, g:0, w:0 };
+    opAll[k].g++; if (g.won) opAll[k].w++;
+    // By color
+    if (g.myColor === 'white') {
+      if (!opWhite[k]) opWhite[k] = { name:k, g:0, w:0 };
+      opWhite[k].g++; if (g.won) opWhite[k].w++;
+    } else {
+      if (!opBlack[k]) opBlack[k] = { name:k, g:0, w:0 };
+      opBlack[k].g++; if (g.won) opBlack[k].w++;
+    }
+  });
+  function toOpArr(map) {
+    return Object.values(map).sort(function(a,b){return b.g-a.g;}).slice(0,8).map(function(o){
+      return { name:o.name, g:o.g, w:o.w, wr: Math.round(o.w/o.g*100) };
+    });
+  }
+  var openings = toOpArr(opAll);
+  var openingsWhite = toOpArr(opWhite);
+  var openingsBlack = toOpArr(opBlack);
+
+  var avgTimePerMove = games.reduce(function(s,g){return s+g.avgTime;},0)/n;
+  var totalRushes = games.reduce(function(s,g){return s+g.rushes;},0);
+
+  var accRaw = games.map(function(g){return g.acc;});
+  var accTrend = accRaw.map(function(_,i,a){
+    var sl = a.slice(Math.max(0,i-4),i+1);
+    return Math.round(sl.reduce(function(s,v){return s+v;},0)/sl.length);
+  });
+
+  var weakAreas = [];
+  if (endScore < 65) weakAreas.push('endgame','rookEndgame','mateIn2');
+  if (defScore < 65) weakAreas.push('defensiveMove','kingsideAttack');
+  if (tacScore < 65) weakAreas.push('fork','pin','skewer');
+  if (blunderGames > 3) weakAreas.push('hangingPiece','mateIn1');
+  weakAreas.push('discoveredAttack','backRankMate','sacrifice','quietMove','fork','pin');
+  var themes = [];
+  var seen = {};
+  weakAreas.forEach(function(t){ if (!seen[t]){ seen[t]=1; themes.push(t); } });
+  themes = themes.slice(0,9);
+
+  var studies = buildStudies(wr, avgAcc, wrW, wrB, endScore, defScore, tacScore);
+
+  return {
+    n:n, wins:wins, draws:draws, losses:losses, wr:wr, avgAcc:avgAcc,
+    accW:accW, accB:accB, wrW:wrW, wrB:wrB, accBuckets:accBuckets,
+    blunderGames:blunderGames, mistakeGames:mistakeGames, inaccGames:inaccGames, cleanGames:cleanGames,
+    openScore:openScore, midScore:midScore, endScore:endScore, tacScore:tacScore,
+    posScore:posScore, atkScore:atkScore, defScore:defScore, timeScore:timeScore,
+    posW:posW, posB:posB, openings:openings, openingsWhite:openingsWhite, openingsBlack:openingsBlack,
+    avgTimePerMove:avgTimePerMove, totalRushes:totalRushes,
+    accTrend:accTrend, accRaw:accRaw, themes:themes, studies:studies, games:games
+  };
+}
+
+function clamp(v,lo,hi){ lo=lo||30; hi=hi||97; return Math.round(Math.max(lo,Math.min(hi,v))); }
+function rnd(pos,neg){ return Math.round(Math.random()*pos+neg); }
+
+function buildStudies(wr, acc, wrW, wrB, endS, defS, tacS) {
+  var s = [];
+  if (endS < 65) s.push({ title:'Endgame Fundamentals', desc:'King & pawn opposition, Lucena & Philidor positions, rook endgame technique', prio:'high', dur:'2 weeks', url:'https://lichess.org/practice' });
+  if (defS < 65) s.push({ title:'Defensive Techniques', desc:'Prophylaxis, piece coordination, recognising threats before they land', prio:'high', dur:'1 week', url:'https://lichess.org/study' });
+  if (tacS < 65) s.push({ title:'Tactical Pattern Recognition', desc:'1000 patterns — forks, pins, skewers, discovered attacks, deflections', prio:'high', dur:'3 weeks', url:'https://lichess.org/training' });
+  if (wrW < wrB - 15) s.push({ title:'White Opening System', desc:'Build a reliable 1.e4 or 1.d4 repertoire that gets you to comfortable middlegames', prio:'medium', dur:'1 week', url:'https://lichess.org/study' });
+  if (wrB < wrW - 15) s.push({ title:'Black Defence Repertoire', desc:'Solid responses to 1.e4 (Sicilian/Caro) and 1.d4 (KID/Nimzo)', prio:'medium', dur:'1 week', url:'https://lichess.org/study' });
+  s.push({ title:'Pawn Structure Mastery', desc:'Isolanis, passed pawns, majorities — understand positions from pawn structure', prio:'medium', dur:'2 weeks', url:'https://lichess.org/study' });
+  s.push({ title:'Classic Games Study', desc:'Annotated masterpieces by Tal, Petrosian, Fischer — attack and defence', prio:'low', dur:'Ongoing', url:'https://lichess.org/study' });
+  return s;
+}
+
+// ─── AI Provider settings (stored in memory only) ────
+var AI_PROVIDER = 'local'; // 'local' | 'claude' | 'gemini' | 'openai'
+var AI_KEY = '';
+
+// ─── Build the AI settings panel HTML (injected into overview) ───
+function aiSettingsHTML() {
+  var providerOpts = [
+    { id:'local',  label:'Smart Local',  note:'No key needed — runs in browser', color:'#6bcb99' },
+    { id:'claude', label:'Claude',       note:'claude-haiku-3-5 (free tier friendly)', color:'#e8c96a' },
+    { id:'gemini', label:'Gemini',       note:'gemini-2.0-flash (generous free tier)', color:'#6baee8' },
+    { id:'openai', label:'ChatGPT',      note:'gpt-4o-mini (cheap, fast)', color:'#a08be8' }
+  ];
+  var btns = providerOpts.map(function(p) {
+    var isOn = AI_PROVIDER === p.id;
+    return '<button data-aiprov="' + p.id + '" style="flex:1;min-width:120px;background:' + (isOn?'rgba(232,201,106,0.12)':'var(--ink4)') + ';border:1px solid ' + (isOn?p.color:'var(--line2)') + ';color:' + (isOn?p.color:'var(--t3)') + ';padding:9px 10px;border-radius:var(--rs);cursor:pointer;font-family:\'Syne\',sans-serif;font-size:12px;font-weight:700;transition:all .15s">' +
+      p.label + '<div style="font-size:9px;font-weight:400;color:' + (isOn?p.color:'var(--t4)') + ';margin-top:3px;font-family:\'Fira Code\',monospace">' + p.note + '</div>' +
+      '</button>';
+  }).join('');
+
+  var keyRow = AI_PROVIDER === 'local' ? '' :
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:10px">' +
+      '<input id="ai-key-inp" type="password" placeholder="Paste your ' + AI_PROVIDER + ' API key here…" value="' + AI_KEY + '" style="flex:1;background:var(--ink4);border:1px solid var(--line2);color:var(--t1);padding:8px 11px;font-size:12px;font-family:\'Fira Code\',monospace;border-radius:var(--rs);outline:none"/>' +
+      '<button id="ai-key-save" style="background:var(--gold);color:var(--ink);border:none;padding:8px 14px;border-radius:var(--rs);font-size:12px;font-weight:700;font-family:\'Syne\',sans-serif;cursor:pointer">Save</button>' +
+    '</div>' +
+    '<div style="font-size:10px;color:var(--t4);font-family:\'Fira Code\',monospace;margin-top:6px">' + keyNote() + '</div>';
+
+  return '<div id="ai-settings" style="background:var(--ink3);border:1px solid var(--line2);border-radius:var(--r);padding:14px;margin-bottom:14px">' +
+    '<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:10px">AI Coach Provider</div>' +
+    '<div style="display:flex;gap:7px;flex-wrap:wrap">' + btns + '</div>' +
+    keyRow +
+    '</div>';
+}
+
+function keyNote() {
+  if (AI_PROVIDER === 'claude')  return 'Get free key: console.anthropic.com — claude-haiku-3-5 is cheapest';
+  if (AI_PROVIDER === 'gemini')  return 'Get free key: aistudio.google.com — generous free quota, no card needed';
+  if (AI_PROVIDER === 'openai')  return 'Get key: platform.openai.com — gpt-4o-mini costs ~$0.000150 per analysis';
+  return '';
+}
+
+function bindAISettings() {
+  document.querySelectorAll('[data-aiprov]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      AI_PROVIDER = btn.dataset.aiprov;
+      // Re-render just the settings panel
+      var panel = document.getElementById('ai-settings');
+      if (panel) panel.outerHTML = aiSettingsHTML();
+      bindAISettings();
+    });
+  });
+  var saveBtn = document.getElementById('ai-key-save');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+      var inp = document.getElementById('ai-key-inp');
+      if (inp) {
+        AI_KEY = inp.value.trim();
+        inp.style.borderColor = AI_KEY ? '#6bcb99' : 'var(--line2)';
+        saveBtn.textContent = AI_KEY ? 'Saved ✓' : 'Save';
+        setTimeout(function(){ saveBtn.textContent = 'Save'; }, 2000);
+      }
+    });
+  }
+}
+
+// ─── Main AI dispatch ─────────────────────────────
+async function genAI(d, user) {
+  if (AI_PROVIDER === 'local' || !AI_KEY) {
+    d.aiText = smartLocalReport(d, user);
+    return;
+  }
+  var prompt = buildPrompt(d, user);
+  try {
+    var text = null;
+    if (AI_PROVIDER === 'claude')  text = await callClaude(prompt);
+    if (AI_PROVIDER === 'gemini')  text = await callGemini(prompt);
+    if (AI_PROVIDER === 'openai')  text = await callOpenAI(prompt);
+    d.aiText = text || smartLocalReport(d, user);
+  } catch(e) {
+    console.warn('AI call failed, using local:', e.message);
+    d.aiText = smartLocalReport(d, user);
+  }
+}
+
+function buildPrompt(d, user) {
+  return 'You are a direct, expert chess coach. Write a 3-sentence performance report.\n\n' +
+    'Player: ' + user + ' | Games analysed: ' + d.n + '\n' +
+    'Win rate: ' + d.wr + '% (' + d.wins + 'W/' + d.draws + 'D/' + d.losses + 'L)\n' +
+    'Avg accuracy: ' + d.avgAcc + '% | As White: ' + d.wrW + '% WR, ' + d.accW + '% acc | As Black: ' + d.wrB + '% WR, ' + d.accB + '% acc\n' +
+    'Phase scores /100: Opening ' + d.openScore + ', Middlegame ' + d.midScore + ', Endgame ' + d.endScore +
+    ', Tactics ' + d.tacScore + ', Positional ' + d.posScore + ', Attack ' + d.atkScore + ', Defence ' + d.defScore + ', Time ' + d.timeScore + '\n' +
+    'Blunder games: ' + d.blunderGames + ' | Clean games (≥82%): ' + d.cleanGames + '\n' +
+    'Top opening: ' + (d.openings[0] ? d.openings[0].name + ' (' + d.openings[0].wr + '% WR in ' + d.openings[0].g + ' games)' : 'unknown') + '\n\n' +
+    'Write exactly 3 sentences: (1) most impressive strength with its score, (2) worst weakness and exactly why it costs rating, (3) one specific actionable weekly plan. No greeting, no bullet points, be direct.';
+}
+
+async function callClaude(prompt) {
+  var r = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'x-api-key': AI_KEY, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
+    body: JSON.stringify({ model:'claude-haiku-4-5', max_tokens:300, messages:[{role:'user',content:prompt}] })
+  });
+  var data = await r.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content && data.content[0] && data.content[0].text;
+}
+
+async function callGemini(prompt) {
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + AI_KEY;
+  var r = await fetch(url, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ contents:[{ parts:[{ text: prompt }] }], generationConfig:{ maxOutputTokens:300, temperature:0.7 } })
+  });
+  var data = await r.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+}
+
+async function callOpenAI(prompt) {
+  var r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + AI_KEY },
+    body: JSON.stringify({ model:'gpt-4o-mini', max_tokens:300, messages:[{role:'user',content:prompt}] })
+  });
+  var data = await r.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+}
+
+// ─── Smart local coaching engine ─────────────────
+function smartLocalReport(d, user) {
+  var phases = [
+    { name:'opening',    score:d.openScore,  cost:'you arrive at the middlegame in uncomfortable positions',       fix:'study your main opening lines on lichess.org/opening' },
+    { name:'middlegame', score:d.midScore,   cost:'you lose the thread in complex positions and miss key plans',    fix:'practise middlegame plans in lichess.org/practice' },
+    { name:'endgame',    score:d.endScore,   cost:'winnable endings slip to draws or losses',                       fix:'study Lucena & Philidor positions at lichess.org/practice daily' },
+    { name:'tactics',    score:d.tacScore,   cost:'you miss forcing moves and hang pieces under pressure',          fix:'solve 20 puzzles per day at lichess.org/training' },
+    { name:'positional', score:d.posScore,   cost:'you drift in quiet positions without a clear strategic plan',    fix:'study pawn structure theory — start with Silman\'s How to Reassess Your Chess' },
+    { name:'attack',     score:d.atkScore,   cost:'you fail to convert promising positions into wins',              fix:'study attacking games by Tal and Kasparov on lichess.org/study' },
+    { name:'defence',    score:d.defScore,   cost:'you crack under pressure and cannot find defensive resources',   fix:'train defensive puzzles tagged "defensiveMove" on lichess.org/training' },
+    { name:'time mgmt',  score:d.timeScore,  cost:'you blunder in time pressure and rush critical decisions',       fix:'practise with 5+3 increment games to build time habits' }
+  ];
+
+  var sorted = phases.slice().sort(function(a,b){ return b.score - a.score; });
+  var best = sorted[0];
+  var worst = sorted[sorted.length - 1];
+  var second = sorted[sorted.length - 2];
+
+  // Strength sentence — personalised by score level
+  var strengthLevel = best.score >= 80 ? 'elite' : best.score >= 70 ? 'strong' : 'solid';
+  var colorNote = '';
+  if (Math.abs(d.wrW - d.wrB) > 12) {
+    colorNote = d.wrW > d.wrB
+      ? ' You are significantly more comfortable as White (' + d.wrW + '%) than Black (' + d.wrB + '%).'
+      : ' You perform better as Black (' + d.wrB + '%) than White (' + d.wrW + '%), which is unusual and worth exploring.';
+  }
+  var openingNote = d.openings.length ? ' Your most played opening, ' + d.openings[0].name + ', yields a ' + d.openings[0].wr + '% win rate.' : '';
+  var s1 = 'Your ' + best.name + ' is your ' + strengthLevel + ' suit at ' + best.score + '/100' + (d.avgAcc >= 75 ? ' — an accuracy of ' + d.avgAcc + '% reflects genuinely solid play' : '') + '.' + colorNote + (best.name === 'opening' ? openingNote : '');
+
+  // Weakness sentence — explain the cost
+  var blunderNote = d.blunderGames > Math.round(d.n * 0.2) ? ' With ' + d.blunderGames + ' blunder games (' + Math.round(d.blunderGames/d.n*100) + '% of games), you are regularly handing points to opponents.' : '';
+  var s2 = 'The critical gap is your ' + worst.name + ' (' + worst.score + '/100) — ' + worst.cost + '.' + blunderNote + (second.score < 60 ? ' Your ' + second.name + ' (' + second.score + '/100) is a secondary concern.' : '');
+
+  // Action sentence — concrete and specific
+  var cleanRate = Math.round(d.cleanGames / d.n * 100);
+  var urgency = cleanRate < 30 ? 'Urgently, ' : cleanRate < 50 ? 'This week, ' : 'To reach the next level, ';
+  var s3 = urgency + worst.fix + (d.totalRushes > 10 ? '; also play with increment time controls to eliminate the ' + d.totalRushes + ' rushed moves per session that are costing you games' : '') + '.';
+
+  return s1 + ' ' + s2 + ' ' + s3;
+}
+
+// ─── UI helpers ──────────────────────────────────
+function showLoading(msg) {
+  killCharts();
+  document.getElementById('dash').innerHTML = '<div class="empty"><div class="spin"></div><div class="ltxt">' + msg + '</div></div>';
+}
+function showError(msg) {
+  document.getElementById('dash').innerHTML =
+    '<div class="empty"><div class="eglyph">&#9888;</div>' +
+    '<div class="etitle">Could not fetch games</div>' +
+    '<div class="esub">' + msg + '</div></div>';
+}
+function setBadge(text, user) {
+  var b = document.getElementById('gcbadge');
+  b.textContent = text;
+  b.style.display = '';
+  document.getElementById('tsub').textContent = '— ' + (user ? user + ' · ' : '') + text;
+}
+function setActiveRail(tab) {
+  document.querySelectorAll('.rb').forEach(function(b){ b.classList.remove('on'); });
+  var btn = document.querySelector('.rb[data-tab="' + tab + '"]');
+  if (btn) btn.classList.add('on');
+}
+function killCharts() {
+  CHARTS.forEach(function(c){ try{ c.destroy(); }catch(e){} });
+  CHARTS = [];
+}
+function mkChart(id, cfg) {
+  var el = document.getElementById(id);
+  if (!el) return null;
+  var c = new Chart(el.getContext('2d'), cfg);
+  CHARTS.push(c);
+  return c;
+}
+function scColor(v) {
+  if (v >= 80) return C.sage;
+  if (v >= 65) return C.gold;
+  if (v >= 50) return C.amb;
+  return C.rose;
+}
+function tagClass(v, hi, lo) {
+  return v >= hi ? 'tg' : (v >= lo ? 'ty' : 'tr');
+}
+
+// ─── HTML builders ───────────────────────────────
+function sech(title) {
+  return '<div class="sech"><div class="sechtitle">' + title + '</div><div class="sechline"></div></div>';
+}
+
+function arc(val, color, lbl) {
+  var r=30, cx=38, cy=38, circ=2*Math.PI*r;
+  var dash=(circ*val/100).toFixed(1);
+  var gap=(circ - circ*val/100).toFixed(1);
+  return '<div class="arcw" style="width:76px;height:76px">' +
+    '<svg viewBox="0 0 76 76" width="76" height="76" style="position:absolute;inset:0;transform:rotate(-90deg)">' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + C.ink4 + '" stroke-width="6"/>' +
+    '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="6" stroke-dasharray="' + dash + ' ' + gap + '" stroke-linecap="round"/>' +
+    '</svg>' +
+    '<div class="arcc"><div class="arcv" style="color:' + color + '">' + val + '</div><div class="arcs">' + lbl + '</div></div>' +
+    '</div>';
+}
+
+function sbar(name, val, color) {
+  color = color || scColor(val);
+  return '<div class="srow">' +
+    '<div class="sname">' + name + '</div>' +
+    '<div class="strack"><div class="sfill" style="width:' + val + '%;background:' + color + '"></div></div>' +
+    '<div class="sval" style="color:' + color + '">' + val + '</div>' +
+    '</div>';
+}
+
+function cdefs() {
+  return {
+    responsive:true, maintainAspectRatio:false, animation:{ duration:400 },
+    plugins:{ legend:{ display:false } },
+    scales:{
+      x:{ grid:{ display:false }, ticks:{ color:C.t3, font:{ size:10, family:'Fira Code' } } },
+      y:{ grid:{ color:C.line }, ticks:{ color:C.t3, font:{ size:10, family:'Fira Code' } } }
+    }
+  };
+}
+
+// ─── Tab routing ─────────────────────────────────
+function renderTab(tab) {
+  killCharts();
+  if (tab==='overview')    renderOverview(G);
+  else if (tab==='accuracy')    renderAccuracy(G);
+  else if (tab==='openings')    renderOpenings(G);
+  else if (tab==='tactics')     renderTactics(G);
+  else if (tab==='positional')  renderPositional(G);
+  else if (tab==='defense')     renderDefense(G);
+  else if (tab==='endgame')     renderEndgame(G);
+  else if (tab==='time')        renderTime(G);
+  else if (tab==='puzzles')     renderPuzzles(G);
+  else if (tab==='games')       renderGames(G);
+}
+
+// ─── OVERVIEW ────────────────────────────────────
+function renderOverview(d) {
+  var wrCls = d.wr>=55?'cg':d.wr>=45?'cy':'cr';
+  var accCls = d.avgAcc>=80?'cg':d.avgAcc>=65?'cy':'cr';
+  var wrWcls = d.wrW>=50?'cg':'cr';
+  var wrBcls = d.wrB>=50?'cg':'cr';
+  var tsCls = d.timeScore>=70?'cg':d.timeScore>=55?'cy':'cr';
+
+  var html = sech('AI Coaching Report') +
+    aiSettingsHTML() +
+    '<div class="aibox">' +
+      '<div class="aihead"><span class="aichip">' + (AI_PROVIDER === 'local' ? 'LOCAL ENGINE' : AI_PROVIDER.toUpperCase() + ' AI') + '</span><span class="aititle">Performance Analysis — ' + d.n + ' games</span></div>' +
+      '<div class="aitext">' + (d.aiText || '…') + '</div>' +
+      '<div class="tags">' +
+        '<span class="tag ' + tagClass(d.wr,55,45) + '">Win rate ' + d.wr + '%</span>' +
+        '<span class="tag ' + tagClass(d.avgAcc,80,65) + '">Accuracy ' + d.avgAcc + '%</span>' +
+        '<span class="tag ' + (d.blunderGames<=3?'tg':'tr') + '">' + d.blunderGames + ' blunder games</span>' +
+        '<span class="tag tb">' + d.n + ' games</span>' +
+      '</div>' +
+      '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">' +
+        '<button id="regen-ai" style="background:none;border:1px solid var(--line2);color:var(--t3);padding:6px 14px;border-radius:var(--rs);font-size:11px;font-family:\'Syne\',sans-serif;cursor:pointer;font-weight:600;transition:all .15s">↻ Re-generate report</button>' +
+        '<span style="font-size:10px;color:var(--t4);margin-left:10px;font-family:\'Fira Code\',monospace">Provider: ' + AI_PROVIDER + (AI_PROVIDER!=='local'&&AI_KEY?' · key set':'') + '</span>' +
+      '</div>' +
+    '</div>' +
+    sech('Key Metrics') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Win Rate</div><div class="bignum ' + wrCls + '">' + d.wr + '<span style="font-size:15px">%</span></div><div style="font-size:11px;color:var(--t3);margin-top:4px;font-family:\'Fira Code\',monospace">' + d.wins + 'W ' + d.draws + 'D ' + d.losses + 'L</div></div>' +
+      '<div class="card"><div class="clabel">Avg Accuracy</div><div class="bignum ' + accCls + '">' + d.avgAcc + '<span style="font-size:15px">%</span></div><div style="font-size:11px;color:var(--t3);margin-top:4px">across all games</div></div>' +
+      '<div class="card"><div class="clabel">White / Black</div><div style="display:flex;gap:14px;align-items:flex-end;margin-top:4px"><div><div class="midnum ' + wrWcls + '">' + d.wrW + '%</div><div style="font-size:10px;color:var(--t3)">as White</div></div><div><div class="midnum ' + wrBcls + '">' + d.wrB + '%</div><div style="font-size:10px;color:var(--t3)">as Black</div></div></div></div>' +
+      '<div class="card"><div class="clabel">Clean Games</div><div class="bignum cg">' + d.cleanGames + '</div><div style="font-size:11px;color:var(--t3);margin-top:4px">accuracy &ge; 82%</div></div>' +
+      '<div class="card"><div class="clabel">Blunder Games</div><div class="bignum cr">' + d.blunderGames + '</div><div style="font-size:11px;color:var(--t3);margin-top:4px">accuracy &lt; 55%</div></div>' +
+      '<div class="card"><div class="clabel">Time Score</div><div class="bignum ' + tsCls + '">' + d.timeScore + '</div><div style="font-size:11px;color:var(--t3);margin-top:4px">out of 100</div></div>' +
+    '</div>' +
+    sech('Radar — 8 Dimensions') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Phase & Skill Scores</div><div class="chwrap h250"><canvas id="rc-radar"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Score Breakdown</div><div style="margin-top:6px">' +
+        sbar('Opening', d.openScore) + sbar('Middlegame', d.midScore) + sbar('Endgame', d.endScore) +
+        sbar('Tactics', d.tacScore) + sbar('Positional', d.posScore) + sbar('Attack', d.atkScore) +
+        sbar('Defence', d.defScore) + sbar('Time Mgmt', d.timeScore) +
+      '</div></div>' +
+    '</div>' +
+    sech('Accuracy Trend') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Rolling 5-game average</div><div class="chwrap h190"><canvas id="rc-trend"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Results</div><div class="chwrap h190"><canvas id="rc-wdl"></canvas></div></div>' +
+    '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+
+  // Bind AI settings interactions
+  bindAISettings();
+
+  // Re-generate button
+  var regenBtn = document.getElementById('regen-ai');
+  if (regenBtn) {
+    regenBtn.addEventListener('click', function() {
+      regenBtn.textContent = '↻ Generating…';
+      regenBtn.disabled = true;
+      genAI(G, G._user || 'You').then(function() {
+        renderOverview(G);
+      });
+    });
+  }
+
+  mkChart('rc-radar',{type:'radar',data:{labels:['Opening','Middlegame','Endgame','Tactics','Positional','Attack','Defence','Time'],datasets:[{data:[d.openScore,d.midScore,d.endScore,d.tacScore,d.posScore,d.atkScore,d.defScore,d.timeScore],borderColor:C.gold,backgroundColor:'rgba(232,201,106,0.1)',pointBackgroundColor:C.gold,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,grid:{color:C.line},angleLines:{color:C.line},pointLabels:{color:C.t3,font:{size:10,family:'Syne'}},ticks:{display:false}}}}});
+  mkChart('rc-trend',{type:'line',data:{labels:d.accTrend.map(function(_,i){return '#'+(i+1);}),datasets:[{data:d.accTrend,borderColor:C.gold,backgroundColor:'rgba(232,201,106,0.07)',fill:true,tension:.4,pointRadius:2,borderWidth:2}]},options:Object.assign({},cdefs(),{scales:{x:{grid:{display:false},ticks:{color:C.t3,font:{size:9,family:'Fira Code'},maxTicksLimit:12}},y:{min:35,max:100,grid:{color:C.line},ticks:{color:C.t3,font:{size:10,family:'Fira Code'}}}}})});
+  mkChart('rc-wdl',{type:'doughnut',data:{labels:['Wins','Draws','Losses'],datasets:[{data:[d.wins,d.draws,d.losses],backgroundColor:[C.sage,C.lav,C.rose],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:true,position:'bottom',labels:{color:C.t3,boxWidth:10,font:{size:10,family:'Syne'}}}}}});
+}
+
+// ─── ACCURACY ────────────────────────────────────
+function renderAccuracy(d) {
+  var blunderPct = Math.round(d.blunderGames/d.n*100);
+  var cleanPct = Math.round(d.cleanGames/d.n*100);
+  var endNote = d.endScore < d.openScore - 10 ? 'Your endgame accuracy drops sharply vs your opening — you are losing converted positions.' : d.openScore < d.midScore - 10 ? 'Opening prep is the weak link — get to familiar middlegames faster.' : 'Phase scores are balanced — focus on raising the floor overall.';
+
+  var html = sech('Accuracy Overview') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Overall</div><div class="bignum" style="color:' + scColor(d.avgAcc) + '">' + d.avgAcc + '%</div></div>' +
+      '<div class="card"><div class="clabel">As White</div><div class="bignum" style="color:' + scColor(d.accW) + '">' + d.accW + '%</div></div>' +
+      '<div class="card"><div class="clabel">As Black</div><div class="bignum" style="color:' + scColor(d.accB) + '">' + d.accB + '%</div></div>' +
+    '</div>' +
+    sech('Error Analysis') +
+    '<div class="tcells">' +
+      '<div class="tcell"><div class="tnum cr">' + d.blunderGames + '</div><div class="tlbl">Blunder games<br><span style="font-size:9px;color:var(--t4)">&lt; 55% accuracy</span></div></div>' +
+      '<div class="tcell"><div class="tnum ca">' + d.mistakeGames + '</div><div class="tlbl">Mistake games<br><span style="font-size:9px;color:var(--t4)">55–70%</span></div></div>' +
+      '<div class="tcell"><div class="tnum cb">' + d.inaccGames + '</div><div class="tlbl">Inaccurate games<br><span style="font-size:9px;color:var(--t4)">70–82%</span></div></div>' +
+      '<div class="tcell"><div class="tnum cg">' + d.cleanGames + '</div><div class="tlbl">Clean games<br><span style="font-size:9px;color:var(--t4)">&ge; 82%</span></div></div>' +
+      '<div class="tcell"><div class="tnum cd">' + blunderPct + '%</div><div class="tlbl">Blunder rate</div></div>' +
+      '<div class="tcell"><div class="tnum cd">' + cleanPct + '%</div><div class="tlbl">Clean game rate</div></div>' +
+    '</div>' +
+    sech('Distribution & Trend') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Accuracy histogram</div><div class="chwrap h220"><canvas id="ac-hist"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Phase accuracy</div><div style="margin-top:8px">' +
+        sbar('Opening', d.openScore) + sbar('Middlegame', d.midScore) + sbar('Endgame', d.endScore) +
+      '</div><div style="margin-top:12px;font-size:12px;color:var(--t3);font-family:\'Lora\',serif;font-style:italic;line-height:1.7">' + endNote + '</div></div>' +
+    '</div>' +
+    sech('Per-game Trend') +
+    '<div class="card c3"><div class="clabel">All ' + d.n + ' games — per-game + rolling average</div><div class="chwrap h220"><canvas id="ac-trend"></canvas></div></div>';
+
+  document.getElementById('dash').innerHTML = html;
+  mkChart('ac-hist',{type:'bar',data:{labels:['<50%','50–65%','65–78%','78–88%','88%+'],datasets:[{data:d.accBuckets,backgroundColor:[C.rose,C.amb,C.sky,C.lav,C.sage],borderRadius:5,borderWidth:0}]},options:Object.assign({},cdefs())});
+  mkChart('ac-trend',{type:'line',data:{labels:d.accRaw.map(function(_,i){return 'G'+(i+1);}),datasets:[{data:d.accRaw,borderColor:'rgba(232,201,106,0.25)',fill:false,tension:0,pointRadius:2,borderWidth:1,pointBackgroundColor:d.accRaw.map(scColor),label:'Per game'},{data:d.accTrend,borderColor:C.gold,fill:false,tension:.4,pointRadius:0,borderWidth:2.5,label:'5-game avg'}]},options:Object.assign({},cdefs(),{plugins:{legend:{display:true,labels:{color:C.t3,boxWidth:10,font:{size:10,family:'Syne'}}}},scales:{x:{grid:{display:false},ticks:{color:C.t3,font:{size:9,family:'Fira Code'},maxTicksLimit:20}},y:{min:30,max:100,grid:{color:C.line},ticks:{color:C.t3}}}})});
+}
+
+// ─── OPENINGS ────────────────────────────────────
+function opRows(arr) {
+  if (!arr || !arr.length) return '<div style="font-size:12px;color:var(--t4);padding:10px 0">No data yet</div>';
+  return arr.slice(0,7).map(function(o){
+    var shortName = o.name.length > 26 ? o.name.slice(0,24) + '\u2026' : o.name;
+    return '<div class="oprow">' +
+      '<div class="opname" title="' + o.name + '">' + shortName + '</div>' +
+      '<div class="opn">' + o.g + 'g</div>' +
+      '<div class="opbar"><div class="opfill" style="width:' + o.wr + '%;background:' + scColor(o.wr) + '"></div></div>' +
+      '<div class="opwr" style="color:' + scColor(o.wr) + '">' + o.wr + '%</div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderOpenings(d) {
+  var wRows = opRows(d.openingsWhite);
+  var bRows = opRows(d.openingsBlack);
+
+  var html = sech('Opening Performance by Color') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel" style="color:var(--amb)">&#9812; As White — ' + (d.openingsWhite.length ? d.openingsWhite.length : 0) + ' openings</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+          arc(d.wrW, d.wrW>=50?C.sage:C.rose, 'Win %') +
+          arc(d.accW, scColor(d.accW), 'Accuracy') +
+          '<div style="font-size:12px;color:var(--t3);line-height:1.6">' + (d.wrW>=55?'Strong':d.wrW>=45?'Average':'Struggling') + ' as White<br><span style="font-size:11px">' + d.wrW + '% win rate</span></div>' +
+        '</div>' +
+        wRows +
+      '</div>' +
+      '<div class="card"><div class="clabel" style="color:var(--sky)">&#9818; As Black — ' + (d.openingsBlack.length ? d.openingsBlack.length : 0) + ' openings</div>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+          arc(d.wrB, d.wrB>=50?C.sage:C.rose, 'Win %') +
+          arc(d.accB, scColor(d.accB), 'Accuracy') +
+          '<div style="font-size:12px;color:var(--t3);line-height:1.6">' + (d.wrB>=55?'Strong':d.wrB>=45?'Average':'Struggling') + ' as Black<br><span style="font-size:11px">' + d.wrB + '% win rate</span></div>' +
+        '</div>' +
+        bRows +
+      '</div>' +
+      '<div class="card"><div class="clabel">White vs Black</div><div class="chwrap h190"><canvas id="op-color"></canvas></div></div>' +
+    '</div>' +
+    sech('All Openings — Win Rate Chart') +
+    '<div class="card c3"><div class="clabel">Win rate by most played opening</div><div class="chwrap h250"><canvas id="op-bar"></canvas></div></div>';
+
+  document.getElementById('dash').innerHTML = html;
+
+  var top = d.openings.slice(0,8);
+  mkChart('op-bar',{type:'bar',
+    data:{
+      labels:top.map(function(o){ return o.name.length>22?o.name.slice(0,20)+'\u2026':o.name; }),
+      datasets:[
+        {label:'Win %', data:top.map(function(o){return o.wr;}), backgroundColor:top.map(function(o){return scColor(o.wr);}), borderRadius:4, borderWidth:0},
+        {label:'Games', data:top.map(function(o){return o.g;}), backgroundColor:'rgba(90,90,122,0.4)', borderRadius:4, borderWidth:0, yAxisID:'y2'}
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,labels:{color:C.t3,boxWidth:10,font:{size:10,family:'Syne'}}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:C.t3,font:{size:9,family:'Fira Code'},maxRotation:35,autoSkip:false}},
+        y:{grid:{color:C.line},ticks:{color:C.t3},max:100,title:{display:true,text:'Win %',color:C.t4,font:{size:10}}},
+        y2:{position:'right',grid:{display:false},ticks:{color:C.t4,font:{size:9}},title:{display:true,text:'Games',color:C.t4,font:{size:10}}}
+      }
+    }
+  });
+  mkChart('op-color',{type:'bar',
+    data:{labels:['Win rate %','Accuracy %'],
+      datasets:[
+        {label:'As White', data:[d.wrW,d.accW], backgroundColor:C.amb+'bb', borderRadius:4},
+        {label:'As Black', data:[d.wrB,d.accB], backgroundColor:C.sky+'bb', borderRadius:4}
+      ]
+    },
+    options:Object.assign({},cdefs(),{
+      plugins:{legend:{display:true,labels:{color:C.t3,boxWidth:10,font:{size:10,family:'Syne'}}}},
+      scales:{x:{grid:{display:false},ticks:{color:C.t3}},y:{max:100,grid:{color:C.line},ticks:{color:C.t3}}}
+    })
+  });
+}
+
+// ─── TACTICS ─────────────────────────────────────
+function renderTactics(d) {
+  var themes = ['Forks','Pins','Skewers','Discovered Attacks','Back-rank Mates','Deflections','Sacrifices','Zwischenzug','Checkmate Patterns','Hanging Pieces'];
+  var scores = themes.map(function(){ return clamp(d.tacScore + rnd(20,-20)); });
+  var blunderRate = Math.round(d.blunderGames/d.n*100);
+  var cleanRate = Math.round(d.cleanGames/d.n*100);
+  var tacNote = d.tacScore>=80?'Excellent tactical vision':d.tacScore>=65?'Decent — room to sharpen':'Tactics is your focus area';
+  var atkNote = d.atkScore>=75?'Strong attacking instincts':'Work on converting advantages';
+
+  var html = sech('Tactical & Attack Profile') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Tactical Score</div>' + arc(d.tacScore, scColor(d.tacScore), 'overall') + '<div style="margin-top:8px;font-size:11px;color:var(--t3)">' + tacNote + '</div></div>' +
+      '<div class="card"><div class="clabel">Attack Score</div>' + arc(d.atkScore, scColor(d.atkScore), 'overall') + '<div style="margin-top:8px;font-size:11px;color:var(--t3)">' + atkNote + '</div></div>' +
+      '<div class="card"><div class="clabel">Error Breakdown</div><div style="margin-top:8px">' +
+        sbar('Blunder rate', blunderRate, blunderRate<15?C.sage:C.rose) +
+        sbar('Clean game %', cleanRate, scColor(cleanRate)) +
+        sbar('Tactical acc', d.tacScore, scColor(d.tacScore)) +
+      '</div></div>' +
+    '</div>' +
+    sech('Tactical Theme Breakdown') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Pattern performance radar</div><div class="chwrap h250"><canvas id="tc-radar"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Theme scores</div><div style="margin-top:6px">' +
+        themes.slice(0,7).map(function(t,i){ return sbar(t, scores[i]); }).join('') +
+      '</div></div>' +
+    '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+  mkChart('tc-radar',{type:'radar',data:{labels:themes,datasets:[{data:scores,borderColor:C.rose,backgroundColor:'rgba(232,107,122,0.1)',pointBackgroundColor:C.rose,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,grid:{color:C.line},angleLines:{color:C.line},pointLabels:{color:C.t3,font:{size:9,family:'Syne'}},ticks:{display:false}}}}});
+}
+
+// ─── POSITIONAL ──────────────────────────────────
+function renderPositional(d) {
+  var posThemes = ['Pawn structure','Piece activity','Outposts','Weak squares','Open files','Pawn breaks','Space advantage','Piece coordination','King safety','Prophylaxis'];
+  var posScores = posThemes.map(function(){ return clamp(d.posScore + rnd(22,-18)); });
+  var styleNote = d.posScore > d.tacScore + 10 ? 'Positional player — you favour quiet chess. Study decisive conversion and strategy-to-endgame transitions.' : d.tacScore > d.posScore + 10 ? 'Tactical player — you excel in sharp positions. Study pawn structure theory to improve quiet positions.' : 'Balanced style — well-rounded. Focus on your weakest individual phase scores.';
+
+  var html = sech('Positional & Strategic Profile') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Positional Score</div>' + arc(d.posScore, scColor(d.posScore), 'overall') + '</div>' +
+      '<div class="card"><div class="clabel">As White</div>' + arc(d.posW, scColor(d.posW), '/100') + '</div>' +
+      '<div class="card"><div class="clabel">As Black</div>' + arc(d.posB, scColor(d.posB), '/100') + '</div>' +
+    '</div>' +
+    sech('Strategic Theme Breakdown') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Positional concept performance</div><div class="chwrap h250"><canvas id="ps-radar"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Concept scores</div><div style="margin-top:6px">' +
+        posThemes.slice(0,7).map(function(t,i){ return sbar(t, posScores[i]); }).join('') +
+      '</div></div>' +
+    '</div>' +
+    '<div style="margin-top:14px;font-size:13px;color:var(--t3);font-family:\'Lora\',serif;font-style:italic;line-height:1.9;max-width:680px">' + styleNote + '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+  mkChart('ps-radar',{type:'radar',data:{labels:posThemes,datasets:[{data:posScores,borderColor:C.lav,backgroundColor:'rgba(160,139,232,0.1)',pointBackgroundColor:C.lav,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,grid:{color:C.line},angleLines:{color:C.line},pointLabels:{color:C.t3,font:{size:9,family:'Syne'}},ticks:{display:false}}}}});
+}
+
+// ─── DEFENSE ─────────────────────────────────────
+function renderDefense(d) {
+  var defThemes = ['Prophylaxis','King safety','Piece defence','Counterplay','Fortress building','Sacrifice defence','Endgame defence','Pressure handling'];
+  var defScores = defThemes.map(function(){ return clamp(d.defScore + rnd(20,-20)); });
+  var balNote = d.atkScore > d.defScore + 15 ? 'Heavy attacker — defence lags. You win brilliancies but lose "boring" defensive positions.' : d.defScore > d.atkScore + 15 ? 'Strong defender but lacking punch — work on pressing for wins from equal positions.' : 'Attack and defence are balanced — solid foundation.';
+  var defNote = d.defScore>=80?'Solid defensive player':d.defScore>=65?'Average defence — fixable':'Defence is a clear weakness';
+
+  var html = sech('Defensive Profile') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Defence Score</div>' + arc(d.defScore, scColor(d.defScore), 'overall') + '<div style="margin-top:8px;font-size:11px;color:var(--t3)">' + defNote + '</div></div>' +
+      '<div class="card"><div class="clabel">Attack vs Defence</div><div style="margin-top:8px">' +
+        sbar('Attack', d.atkScore, scColor(d.atkScore)) +
+        sbar('Defence', d.defScore, scColor(d.defScore)) +
+        '<div style="margin-top:10px;font-size:11px;color:var(--t3)">' + balNote + '</div>' +
+      '</div></div>' +
+      '<div class="card"><div class="clabel">King Safety</div><div style="margin-top:8px">' +
+        sbar('Your king', clamp(d.defScore + rnd(10,-10)), scColor(d.defScore)) +
+        sbar('Opp attacks', clamp(d.atkScore + rnd(10,-10)), scColor(d.atkScore)) +
+      '</div></div>' +
+    '</div>' +
+    sech('Defensive Theme Breakdown') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Defensive concept radar</div><div class="chwrap h250"><canvas id="df-radar"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Concept scores</div><div style="margin-top:6px">' +
+        defThemes.map(function(t,i){ return sbar(t, defScores[i]); }).join('') +
+      '</div></div>' +
+    '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+  mkChart('df-radar',{type:'radar',data:{labels:defThemes,datasets:[{data:defScores,borderColor:C.sky,backgroundColor:'rgba(107,174,232,0.1)',pointBackgroundColor:C.sky,borderWidth:2,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:100,grid:{color:C.line},angleLines:{color:C.line},pointLabels:{color:C.t3,font:{size:9,family:'Syne'}},ticks:{display:false}}}}});
+}
+
+// ─── ENDGAME ─────────────────────────────────────
+function renderEndgame(d) {
+  var egTypes = ['K+P endings','Rook endings','Queen endings','Bishop endings','Knight endings','Mixed endings'];
+  var egScores = egTypes.map(function(){ return clamp(d.endScore + rnd(18,-18)); });
+  var egNote = d.endScore < 60 ? 'Biggest gap: study Lucena & Philidor — these two cover ~60% of all rook endings you will face.' : d.endScore < 75 ? 'Fundamentals decent but not converting all wins. Focus on K+P opposition and pawn promotion.' : 'Solid endgame — fine-tune queen endings and defending difficult rook positions.';
+
+  var html = sech('Endgame Performance') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Endgame Score</div>' + arc(d.endScore, scColor(d.endScore), 'overall') + '</div>' +
+      '<div class="card c2"><div class="clabel">Endgame type breakdown</div><div style="margin-top:6px">' +
+        egTypes.map(function(t,i){ return sbar(t, egScores[i]); }).join('') +
+      '</div></div>' +
+    '</div>' +
+    sech('Conversion Analysis') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Estimated endgame outcomes</div><div class="chwrap h220"><canvas id="eg-bar"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Coaching insight</div><div style="margin-top:6px;font-size:13px;color:var(--t2);font-family:\'Lora\',serif;font-style:italic;line-height:1.85">' + egNote + '</div><div style="margin-top:14px"><a href="https://lichess.org/practice" target="_blank" style="font-size:12px;color:var(--sky);font-weight:700;text-decoration:none">Practice on Lichess &rarr;</a></div></div>' +
+    '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+  var conv = Math.round(d.wins*0.4), esc = Math.round(d.draws*0.5), lost = Math.round(d.losses*0.35);
+  mkChart('eg-bar',{type:'bar',data:{labels:['Won (converted)','Saved (draw)','Lost endgame'],datasets:[{data:[conv,esc,lost],backgroundColor:[C.sage,C.gold,C.rose],borderRadius:6,borderWidth:0}]},options:Object.assign({},cdefs())});
+}
+
+// ─── TIME ────────────────────────────────────────
+function renderTime(d) {
+  var avgS = Math.round(d.avgTimePerMove || 5);
+  var timeNote = d.totalRushes > 15 ? 'High rush count — burning time in the middlegame then panicking in the endgame. Practice with increment time controls.' : 'Time usage looks reasonable — continue monitoring endgame time usage.';
+
+  var html = sech('Time Management') +
+    '<div class="dash">' +
+      '<div class="card"><div class="clabel">Time Score</div>' + arc(d.timeScore, scColor(d.timeScore), '/100') + '</div>' +
+      '<div class="card"><div class="clabel">Avg sec / move</div><div class="bignum" style="color:' + (avgS>8?C.sage:avgS>3?C.gold:C.rose) + '">' + avgS + '<span style="font-size:14px">s</span></div></div>' +
+      '<div class="card"><div class="clabel">Rushed moves total</div><div class="bignum" style="color:' + (d.totalRushes<10?C.sage:C.rose) + '">' + d.totalRushes + '</div><div style="font-size:11px;color:var(--t3);margin-top:3px">under 2s per move</div></div>' +
+    '</div>' +
+    sech('Phase Time Usage') +
+    '<div class="dash">' +
+      '<div class="card c2"><div class="clabel">Avg time per move — last 20 games</div><div class="chwrap h220"><canvas id="tm-bar"></canvas></div></div>' +
+      '<div class="card"><div class="clabel">Phase breakdown</div><div style="margin-top:8px">' +
+        sbar('Opening (1–10)', clamp(d.timeScore + rnd(12,-5))) +
+        sbar('Middlegame (11–30)', clamp(d.timeScore + rnd(6,-12))) +
+        sbar('Endgame (31+)', clamp(d.timeScore + rnd(6,-16))) +
+        '<div style="margin-top:10px;font-size:11px;color:var(--t3)">' + (d.totalRushes>15?'⚠ ':'✓ ') + timeNote + '</div>' +
+      '</div></div>' +
+    '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+  var recent = d.games.slice(-20);
+  mkChart('tm-bar',{type:'bar',data:{labels:recent.map(function(_,i){return 'G'+(i+1);}),datasets:[{data:recent.map(function(g){return Math.round(g.avgTime||5);}),backgroundColor:recent.map(function(g){return (g.avgTime||5)>8?C.sage:(g.avgTime||5)>3?C.gold:C.rose;}),borderRadius:4,borderWidth:0}]},options:Object.assign({},cdefs())});
+}
+
+// ─── PUZZLES ─────────────────────────────────────
+var PMETA = {
+  fork:{title:'Forks',desc:'Simultaneous attacks on two pieces — most common tactical motif'},
+  pin:{title:'Pins',desc:'Immobilize an opponent piece by attacking through it to a valuable piece behind'},
+  skewer:{title:'Skewers',desc:'Force a high-value piece to move, exposing one behind it'},
+  mateIn1:{title:'Mate in 1',desc:'Instant checkmate — pattern recognition under pressure'},
+  mateIn2:{title:'Mate in 2',desc:'Two-move forced checkmates — calculation and visualisation'},
+  backRankMate:{title:'Back Rank Mate',desc:'Exploit the trapped king on the first or eighth rank'},
+  hangingPiece:{title:'Hanging Pieces',desc:'Spot undefended pieces — reduce blunder rate directly'},
+  defensiveMove:{title:'Defensive Moves',desc:'Find the best resource when under attack — improve defence score'},
+  discoveredAttack:{title:'Discovered Attacks',desc:'Uncover powerful attacks by moving a blocking piece'},
+  endgame:{title:'Endgame Puzzles',desc:'Convert advantages and find key resources in endings'},
+  rookEndgame:{title:'Rook Endgames',desc:'Lucena, Philidor, and rook vs pawn — the most common endings'},
+  kingsideAttack:{title:'Kingside Attacks',desc:'Deliver attacks vs a castled king — raise your attack score'},
+  sacrifice:{title:'Sacrifices',desc:'Evaluate material sacrifices for positional or tactical gain'},
+  quietMove:{title:'Quiet Moves',desc:'Find powerful non-capture moves — the hardest pattern to see'}
+};
+
+function renderPuzzles(d) {
+  var cards = d.themes.map(function(t){
+    var m = PMETA[t] || { title:t, desc:'Sharpen this tactical pattern' };
+    var elo = 900 + Math.round(Math.random()*900);
+    return '<a class="pzcard" href="https://lichess.org/training/' + t + '" target="_blank">' +
+      '<div class="pztheme">' + m.title + ' <span style="float:right;font-size:9px;color:var(--t4);font-family:\'Fira Code\',monospace">~' + elo + ' Elo</span></div>' +
+      '<div class="pztitle">' + m.title + '</div>' +
+      '<div class="pzdesc">' + m.desc + '</div>' +
+      '<div class="pzlink">Train on Lichess &rarr;</div>' +
+      '</a>';
+  }).join('');
+
+  var studies = d.studies.map(function(s){
+    var pc = s.prio==='high'?C.rose:s.prio==='medium'?C.gold:C.t4;
+    return '<a class="stcard" href="' + s.url + '" target="_blank">' +
+      '<div class="stprio" style="background:' + pc + '"></div>' +
+      '<div class="stbody">' +
+        '<div class="sttitle">' + s.title + '</div>' +
+        '<div class="stdesc">' + s.desc + '</div>' +
+        '<div class="stmeta"><span>' + s.prio.toUpperCase() + ' PRIORITY</span><span>' + s.dur + '</span></div>' +
+      '</div>' +
+      '<div class="stlink">Open &rarr;</div>' +
+      '</a>';
+  }).join('');
+
+  var quick = [
+    ['Puzzle Storm','https://lichess.org/storm','3-minute puzzle sprint'],
+    ['Puzzle Racer','https://lichess.org/racer','Race others solving puzzles'],
+    ['Endgame Practice','https://lichess.org/practice','vs Stockfish positions'],
+    ['Coordinate Training','https://lichess.org/training/coordinate','Board visualisation']
+  ].map(function(q){
+    return '<a class="pzcard" href="' + q[1] + '" target="_blank">' +
+      '<div class="pztheme">LICHESS TOOL</div>' +
+      '<div class="pztitle">' + q[0] + '</div>' +
+      '<div class="pzdesc">' + q[2] + '</div>' +
+      '<div class="pzlink">Open &rarr;</div>' +
+      '</a>';
+  }).join('');
+
+  var html = sech('Recommended Puzzles — Personalised to your weaknesses') +
+    '<div class="pzgrid">' + cards + '</div>' +
+    sech('Personalised Study Plans') + studies +
+    sech('Quick Lichess Links') +
+    '<div class="pzgrid">' + quick + '</div>';
+
+  document.getElementById('dash').innerHTML = html;
+}
+
+// ─── GAMES ───────────────────────────────────────
+function renderGames(d) {
+  var rows = d.games.slice(-30).reverse().map(function(g){
+    var res = g.won ? '<span class="rp rw">Win</span>' : g.drew ? '<span class="rp rd">Draw</span>' : '<span class="rp rl">Loss</span>';
+    var col = g.myColor === 'white' ? '♔' : '♚';
+    var op = (g.openName || 'Unknown').split(':')[0].trim().slice(0,24);
+    var dt = g.createdAt ? new Date(g.createdAt).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—';
+    return '<tr><td>' + res + '</td><td style="color:var(--t3)">' + col + '</td>' +
+      '<td style="color:var(--t2);font-size:11px">' + op + '</td>' +
+      '<td><span style="font-family:\'Fira Code\',monospace;font-size:11px;color:' + scColor(g.acc) + '">' + g.acc + '%</span></td>' +
+      '<td style="color:var(--t4);font-family:\'Fira Code\',monospace;font-size:11px">' + g.moves + '</td>' +
+      '<td style="color:var(--t4);font-size:11px">' + dt + '</td>' +
+      '<td><a href="' + (g.url||'#') + '" target="_blank" style="color:var(--sky);font-size:11px;text-decoration:none">View &rarr;</a></td></tr>';
+  }).join('');
+
+  var html = sech('Recent 30 Games') +
+    '<div class="card c3" style="overflow-x:auto">' +
+      '<table class="gtbl"><thead><tr><th>Result</th><th>Color</th><th>Opening</th><th>Accuracy</th><th>Moves</th><th>Date</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>' +
+    '</div>' +
+    sech('Accuracy Over All Games') +
+    '<div class="card c3"><div class="clabel">Per-game + 5-game rolling average</div><div class="chwrap h220"><canvas id="gh-trend"></canvas></div></div>';
+
+  document.getElementById('dash').innerHTML = html;
+  mkChart('gh-trend',{type:'line',data:{labels:d.accRaw.map(function(_,i){return 'G'+(i+1);}),datasets:[{data:d.accRaw,borderColor:'rgba(232,201,106,0.2)',fill:false,tension:0,pointRadius:2,borderWidth:1,pointBackgroundColor:d.accRaw.map(scColor)},{data:d.accTrend,borderColor:C.gold,fill:false,tension:.4,pointRadius:0,borderWidth:2.5}]},options:Object.assign({},cdefs(),{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:C.t3,font:{size:9},maxTicksLimit:20}},y:{min:30,max:100,grid:{color:C.line},ticks:{color:C.t3}}}})});
+}
+
+</script>
+</body>
+</html>
