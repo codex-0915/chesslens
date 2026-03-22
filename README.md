@@ -5,9 +5,9 @@
 > 10-dimension performance report with AI coaching — no server, no account,
 > no build step required.
 
-[![Release](https://img.shields.io/github/v/release/YOUR_USERNAME/chesslens?style=flat-square&color=e8c96a)](https://github.com/YOUR_USERNAME/chesslens/releases)
-[![Deploy](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/chesslens/release.yml?style=flat-square&label=deploy)](https://github.com/YOUR_USERNAME/chesslens/actions/workflows/release.yml)
-[![Live](https://img.shields.io/badge/live-GitHub%20Pages-6baee8?style=flat-square)](https://YOUR_USERNAME.github.io/chesslens)
+[![Release](https://img.shields.io/github/v/release/codex-0915/chesslens?style=flat-square&color=e8c96a)](https://github.com/codex-0915/chesslens/releases)
+[![Deploy](https://img.shields.io/github/actions/workflow/status/codex-0915/chesslens/release.yml?style=flat-square&label=deploy)](https://github.com/codex-0915/chesslens/actions/workflows/release.yml)
+[![Live](https://img.shields.io/badge/live-GitHub%20Pages-6baee8?style=flat-square)](https://codex-0915.github.io/chesslens)
 [![License](https://img.shields.io/badge/license-MIT-6bcb99?style=flat-square)](LICENSE)
 
 ---
@@ -55,12 +55,12 @@ and presents the results as an interactive dashboard.
 
 ### Use the live site
 
-Visit **[YOUR_USERNAME.github.io/chesslens](https://YOUR_USERNAME.github.io/chesslens)** and enter any public Lichess username.
+Visit **[codex-0915.github.io/chesslens](https://codex-0915.github.io/chesslens)** and enter any public Lichess username.
 
 ### Run locally
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/chesslens.git
+git clone https://github.com/codex-0915/chesslens.git
 cd chesslens
 
 open index.html        # macOS
