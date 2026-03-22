@@ -1,0 +1,151 @@
+name: Release & Deploy
+
+# ── Trigger ───────────────────────────────────────────────────────────────────
+# Push a tag like v1.0.0 to trigger a GitHub Release + GitHub Pages deployment.
+# Convention:  v<major>.<minor>.<patch>   e.g.  v1.0.0  v1.2.3  v2.0.0-beta.1
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+permissions:
+  contents: write      # create GitHub Release + upload release assets
+  pages: write         # deploy to GitHub Pages
+  id-token: write      # required by actions/deploy-pages (OIDC)
+
+# ── Concurrency ───────────────────────────────────────────────────────────────
+# Only one deployment runs at a time; cancel in-progress runs on new tag push.
+concurrency:
+  group: release-and-deploy
+  cancel-in-progress: true
+
+jobs:
+
+  # ── Job 1: Build ─────────────────────────────────────────────────────────────
+  # Injects the version tag into index.html and prepares the Pages artifact.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: tag
+        run: |
+          VERSION="${GITHUB_REF_NAME}"            # e.g. v1.2.3
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # Mark as pre-release if tag contains a hyphen (v1.0.0-beta.1)
+          if [[ "$VERSION" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Stamp version into index.html
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          # Replace the <title> tag to include the version
+          sed -i "s|<title>ChessLens</title>|<title>ChessLens ${VERSION}</title>|g" index.html
+          # Inject a version comment at the top of the file
+          sed -i "1s|^|<!-- ChessLens ${VERSION} — built $(date -u +%Y-%m-%dT%H:%M:%SZ) -->\n|" index.html
+          echo "Stamped version ${VERSION} into index.html"
+
+      - name: Validate HTML is non-empty
+        run: |
+          SIZE=$(wc -c < index.html)
+          echo "index.html size: ${SIZE} bytes"
+          if [ "$SIZE" -lt 10000 ]; then
+            echo "ERROR: index.html is too small — something went wrong"
+            exit 1
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .        # deploy the whole repo root (index.html lives here)
+
+      - name: Copy release asset
+        run: cp index.html chesslens-${{ steps.tag.outputs.version }}.html
+
+      - name: Upload release asset for next job
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-asset
+          path: chesslens-${{ steps.tag.outputs.version }}.html
+          retention-days: 1
+
+  # ── Job 2: GitHub Release ─────────────────────────────────────────────────
+  # Creates a GitHub Release with the versioned HTML attached as a downloadable asset.
+  release:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # need full history for changelog generation
+
+      - name: Download release asset
+        uses: actions/download-artifact@v4
+        with:
+          name: release-asset
+
+      - name: Generate changelog from commits
+        id: changelog
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+
+          # Find the previous tag to diff against
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${VERSION}$" | head -1)
+
+          if [ -z "$PREV_TAG" ]; then
+            # First release — list all commits
+            COMMITS=$(git log --pretty=format:"- %s (%h)" | head -30)
+            CHANGELOG="### 🎉 Initial Release\n\n${COMMITS}"
+          else
+            COMMITS=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" | head -30)
+            CHANGELOG="### Changes since ${PREV_TAG}\n\n${COMMITS}"
+          fi
+
+          # Write to file to handle multiline safely
+          printf "%b" "$CHANGELOG" > changelog.md
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.version }}
+          name: ChessLens ${{ needs.build.outputs.version }}
+          prerelease: ${{ needs.build.outputs.prerelease }}
+          body_path: changelog.md
+          files: chesslens-${{ needs.build.outputs.version }}.html
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Job 3: Deploy to GitHub Pages ─────────────────────────────────────────
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Print live URL
+        run: |
+          echo "✅ ChessLens ${{ needs.build.outputs.version }} is live at:"
+          echo "   ${{ steps.deploy.outputs.page_url }}"
